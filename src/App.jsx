@@ -1,7 +1,13 @@
 // src/App.jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 // ===== COMPONENTES PÚBLICOS =====
 import Header from "./components/Header";
@@ -37,20 +43,14 @@ const ProtectedRoute = ({ user, children }) => {
 
 const AppContent = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
+  // ✅ SESSION STORAGE (SE BORRA AL CERRAR NAVEGADOR)
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem("user");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.IdRol === 1 && !parsed.userType) {
-          parsed.userType = "admin";
-        }
-        return parsed;
-      }
-      return null;
+      const saved = sessionStorage.getItem("user");
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      localStorage.removeItem("user");
       return null;
     }
   });
@@ -64,6 +64,18 @@ const AppContent = () => {
     }
   });
 
+  // 🔁 Redirección automática según tipo
+  useEffect(() => {
+    if (user) {
+      if (user.userType === "admin" || user.IdRol === 1) {
+        if (location.pathname === "/" || location.pathname === "/login") {
+          navigate("/admin/AdminDashboard", { replace: true });
+        }
+      }
+    }
+  }, [user, location.pathname, navigate]);
+
+  // 🛒 Carrito
   const updateCart = (items) => {
     setCartItems(items);
     localStorage.setItem("cart", JSON.stringify(items));
@@ -84,14 +96,23 @@ const AppContent = () => {
     }
   };
 
+  // 🔑 LOGIN
   const handleLogin = (userData) => {
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    sessionStorage.setItem("user", JSON.stringify(userData));
+
+    if (userData.userType === "admin" || userData.IdRol === 1) {
+      navigate("/admin/AdminDashboard", { replace: true });
+    } else {
+      navigate("/profile", { replace: true });
+    }
   };
 
+  // 🚪 LOGOUT
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
+    navigate("/login", { replace: true });
   };
 
   const cartItemCount = useMemo(
@@ -108,13 +129,14 @@ const AppContent = () => {
       {showHeader && (
         <Header
           user={user}
-          onLoginClick={() => (window.location.href = "/login")}
+          onLoginClick={() => navigate("/login")}
           onLogout={handleLogout}
           cartItemCount={cartItemCount}
           cartItems={cartItems}
           updateCart={updateCart}
         />
       )}
+
       <Routes>
         {/* RUTAS PÚBLICAS */}
         <Route
@@ -143,26 +165,14 @@ const AppContent = () => {
           }
         />
 
-        {/* ✅ RUTA DEL PERFIL - AGREGADA */}
         <Route
           path="/profile"
-          element={
-            <Profile
-              user={user}
-              onLogout={handleLogout}
-            />
-          }
+          element={<Profile user={user} onLogout={handleLogout} />}
         />
 
-        {/* ✅ RUTA ALTERNATIVA /perfil */}
         <Route
           path="/perfil"
-          element={
-            <Profile
-              user={user}
-              onLogout={handleLogout}
-            />
-          }
+          element={<Profile user={user} onLogout={handleLogout} />}
         />
 
         <Route

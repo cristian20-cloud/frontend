@@ -1,5 +1,5 @@
 // src/pages/admin/AdminLayoutClean.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import {
   FaUser, FaHome, FaBox, FaUsers, FaShoppingCart, FaChartBar,
@@ -61,14 +61,12 @@ const WelcomeDashboard = ({ user }) => {
       justifyContent: "flex-start",
       overflow: "hidden"
     }}>
-      {/* Contenido principal - POSICIONADO MÁS ARRIBA */}
       <div style={{
         textAlign: "center",
         zIndex: 1,
         maxWidth: "800px",
         marginTop: "40px",
       }}>
-        {/* Icono de bienvenida */}
         <div style={{
           width: "100px",
           height: "100px",
@@ -83,7 +81,6 @@ const WelcomeDashboard = ({ user }) => {
           <FaUserTie size={50} color="#000" />
         </div>
 
-        {/* Saludo personalizado */}
         <h1 style={{
           color: "#F5C81B",
           fontSize: "2.5rem",
@@ -95,7 +92,6 @@ const WelcomeDashboard = ({ user }) => {
           {getGreeting()}
         </h1>
 
-        {/* Nombre del usuario */}
         <h2 style={{
           color: "#ffffff",
           fontSize: "1.8rem",
@@ -106,7 +102,6 @@ const WelcomeDashboard = ({ user }) => {
           {userName}
         </h2>
 
-        {/* Rol */}
         <div style={{
           display: "inline-block",
           background: "rgba(245, 200, 27, 0.15)",
@@ -126,7 +121,6 @@ const WelcomeDashboard = ({ user }) => {
           </span>
         </div>
 
-        {/* Fecha */}
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -141,7 +135,6 @@ const WelcomeDashboard = ({ user }) => {
           <span>{currentDate}</span>
         </div>
 
-        {/* Mensaje de bienvenida personalizado */}
         <p style={{
           color: "#D1D5DB",
           fontSize: "1.1rem",
@@ -169,9 +162,9 @@ const AdminLayoutClean = () => {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [sidebarItems, setSidebarItems] = useState([]);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showLogoutDropdown, setShowLogoutDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
-  // ===== CARGAR USUARIO Y MÓDULOS =====
   useEffect(() => {
     const loadUserAndModules = () => {
       const storedUser = localStorage.getItem('user');
@@ -244,7 +237,18 @@ const AdminLayoutClean = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // ===== CERRAR SESIÓN =====
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowLogoutDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('userType');
@@ -252,7 +256,6 @@ const AdminLayoutClean = () => {
     window.location.href = '/';
   };
 
-  // ===== OBTENER ICONO Y TEXTO DE ROL =====
   const getUserTypeIcon = () => {
     if (!user) return FaUserCircle;
     if (user.IdRol === 1 || user.IdUsuario === 999) return FaUserTie;
@@ -267,8 +270,6 @@ const AdminLayoutClean = () => {
   };
 
   const UserIcon = getUserTypeIcon();
-
-  // Verificar si estamos en /admin (ruta base)
   const isBaseAdminRoute = location.pathname === '/admin' || location.pathname === '/admin/';
 
   return (
@@ -370,99 +371,33 @@ const AdminLayoutClean = () => {
           )}
         </nav>
 
-        {/* Botón Cerrar Sesión - SIN LÍNEA DIVISORIA AMARILLA */}
+        {/* Botón Cerrar Sesión con Dropdown - SIN TEXTO DOBLE */}
         <div style={{
-          borderTop: "none",
-          backgroundColor: '#000000',
           padding: '16px 12px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span style={{
-            fontSize: '0.65rem',
-            color: '#9CA3AF',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            fontWeight: '500'
-          }}>
-            Cerrar Sesión
-          </span>
-
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              color: theme.accent,
-              background: "transparent",
-              border: `1.5px solid ${theme.accent}`,
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.2s ease',
-              fontFamily: 'inherit',
-              letterSpacing: '0.3px',
-              textTransform: 'uppercase'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.accent;
-              e.currentTarget.style.color = '#000';
-              e.currentTarget.style.boxShadow = `0 0 15px ${theme.accent}60`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme.accent;
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <span>CERRAR SESIÓN</span>
-          </button>
-        </div>
-
-        {/* Confirmación de Cierre */}
-        {showLogoutConfirm && (
-          <div style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: '#000000',
-            padding: '24px',
-            borderRadius: '12px',
-            border: `2px solid ${theme.accent}`,
-            boxShadow: `0 0 30px rgba(245, 200, 27, 0.5)`,
-            zIndex: 9999,
-            textAlign: 'center',
-            minWidth: '300px'
-          }}>
-            <p style={{
-              color: '#fff',
-              fontSize: '0.9rem',
-              margin: '0 0 20px 0',
-              fontWeight: '600',
-              lineHeight: '1.4'
-            }}>
-              ¿Confirmar cierre de sesión?
-            </p>
+          position: 'relative'
+        }} ref={dropdownRef}>
+          
+          {/* Dropdown - SOLO DOS BOTONES, ARRIBA DEL BOTÓN */}
+          {showLogoutDropdown && (
             <div style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '12px',
+              right: '12px',
+              marginBottom: '8px',
               display: 'flex',
-              gap: '12px',
-              justifyContent: 'center',
-              alignItems: 'center'
+              gap: '8px',
+              animation: 'slideUp 0.2s ease'
             }}>
               <button
-                onClick={() => setShowLogoutConfirm(false)}
+                onClick={() => setShowLogoutDropdown(false)}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
+                  padding: '8px 12px',
                   background: '#1F2937',
                   color: '#D1D5DB',
                   border: '1px solid #4B5563',
@@ -482,12 +417,11 @@ const AdminLayoutClean = () => {
               >
                 Cancelar
               </button>
-
               <button
                 onClick={handleLogout}
                 style={{
                   flex: 1,
-                  padding: '10px 12px',
+                  padding: '8px 12px',
                   background: theme.accent,
                   color: '#000',
                   border: 'none',
@@ -515,26 +449,72 @@ const AdminLayoutClean = () => {
                 <span>Sí, salir</span>
               </button>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Botón Principal - SIN RELLENO AMARILLO */}
+          <button
+            onClick={() => setShowLogoutDropdown(!showLogoutDropdown)}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              color: theme.accent,
+              background: "transparent",
+              border: `1.5px solid ${theme.accent}`,
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+              fontFamily: 'inherit',
+              letterSpacing: '0.3px',
+              textTransform: 'uppercase'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = `0 0 15px ${theme.accent}60`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <FaSignOutAlt size={12} />
+            <span>CERRAR SESIÓN</span>
+          </button>
+        </div>
       </aside>
 
       {/* ===== CONTENIDO PRINCIPAL ===== */}
       <main style={{
         flex: 1,
-        padding: "0",
+        padding: "20px 30px",
         overflowY: 'auto',
         height: '100vh',
         backgroundColor: theme.background,
         fontFamily: 'inherit'
       }}>
-        {/* ✅ MOSTRAR BIENVENIDA SI ESTÁ EN /admin */}
         {isBaseAdminRoute ? (
           <WelcomeDashboard user={user} />
         ) : (
           <Outlet />
         )}
       </main>
+
+      {/* Animación CSS */}
+      <style>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

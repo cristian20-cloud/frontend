@@ -1,11 +1,10 @@
 // src/pages/Login.jsx
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom"; // 👈 ELIMINADO useNavigate
+import { Link } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import { validateCustomerCredentials, validateUserCredentials, registerCustomer, roles } from "../data";
 
-const Login = () => {
-  // 👈 ELIMINADO const navigate = useNavigate();
+const Login = ({ onLogin }) => { // 👈 Recibimos onLogin como prop
   const [view, setView] = useState("auth");
   const [activeTab, setActiveTab] = useState("login");
   const [error, setError] = useState("");
@@ -78,11 +77,13 @@ const Login = () => {
     const cleanEmail = loginData.email.trim().toLowerCase();
     const cleanPassword = loginData.password.trim();
 
-    console.log("🔍 Intentando login con:", { email: cleanEmail });
+    console.log("🔍 Intentando login con:", { email: cleanEmail, password: cleanPassword });
 
     // 1️⃣ Validar usuario del sistema (ADMIN/EMPLEADO)
     const user = validateUserCredentials(cleanEmail, cleanPassword);
     if (user) {
+      console.log("✅ Usuario encontrado en sistema:", user);
+      
       const role = roles.find((r) => r.IdRol === user.IdRol);
       const userData = {
         IdUsuario: user.IdUsuario,
@@ -90,69 +91,51 @@ const Login = () => {
         Correo: user.Correo.trim(),
         IdRol: user.IdRol,
         Estado: user.Estado,
-        Permisos: (user.Permisos || role?.Permisos || []).map((p) => p ? p.trim() : p),
+        Permisos: user.Permisos || role?.Permisos || [],
         Rol: role?.Nombre?.trim() || "Usuario",
         userType: "admin"
       };
 
-      console.log("✅ Usuario del sistema logueado:", userData);
-      localStorage.setItem("user", JSON.stringify(userData));
-      localStorage.setItem("userType", "admin");
+      console.log("✅ Datos de usuario preparados:", userData);
       
-      // ✅ FORZAR REDIRECCIÓN INMEDIATA
-      setTimeout(() => {
-        window.location.href = "/admin";
-      }, 100);
+      // Llamar a onLogin del padre
+      onLogin(userData);
       return;
     }
 
     // 2️⃣ Validar cliente
     const customerResult = validateCustomerCredentials(cleanEmail, cleanPassword);
     if (customerResult?.success) {
-      console.log("✅ Cliente logueado:", customerResult.customer);
-      
-      // Verificar si ya existía un usuario en localStorage
-      const existingUser = localStorage.getItem("user");
-      let existingPedidos = 0;
-      let existingDevoluciones = 0;
-      
-      if (existingUser) {
-        try {
-          const parsed = JSON.parse(existingUser);
-          existingPedidos = parsed.Pedidos || 0;
-          existingDevoluciones = parsed.Devoluciones || 0;
-        } catch (error) {
-          console.error("Error parsing existing user:", error);
-        }
-      }
+      console.log("✅ Cliente encontrado:", customerResult.customer);
       
       const customerWithStats = {
         ...customerResult.customer,
-        Pedidos: customerResult.customer.Pedidos || existingPedidos || 0,
-        Devoluciones: customerResult.customer.Devoluciones || existingDevoluciones || 0
+        Pedidos: customerResult.customer.Pedidos || 0,
+        Devoluciones: customerResult.customer.Devoluciones || 0,
+        userType: "cliente"
       };
       
-      localStorage.setItem("user", JSON.stringify(customerWithStats));
-      localStorage.setItem("userType", "cliente");
+      console.log("✅ Datos de cliente preparados:", customerWithStats);
       
-      // ✅ FORZAR REDIRECCIÓN INMEDIATA
-      setTimeout(() => {
-        window.location.href = "/profile";
-      }, 100);
+      // Llamar a onLogin del padre
+      onLogin(customerWithStats);
       return;
     }
 
+    console.log("❌ Usuario no encontrado");
     setError("Correo o contraseña incorrectos");
   };
 
-  // ===== HANDLE REGISTER CORREGIDO =====
+  // ===== HANDLE REGISTER =====
   const handleRegister = (e) => {
     e.preventDefault();
     resetMessages();
+    
     if (registerData.password !== registerData.confirmPassword) {
       setError("Las claves no coinciden");
       return;
     }
+    
     const result = registerCustomer({
       name: registerData.name,
       email: registerData.email,
@@ -160,22 +143,19 @@ const Login = () => {
       phone: registerData.documentNumber,
       address: "N/A"
     });
+    
     if (result?.success) {
       console.log("✅ Cliente registrado:", result.customer);
       
       const newCustomerWithStats = {
         ...result.customer,
         Pedidos: 0,
-        Devoluciones: 0
+        Devoluciones: 0,
+        userType: "cliente"
       };
       
-      localStorage.setItem("user", JSON.stringify(newCustomerWithStats));
-      localStorage.setItem("userType", "cliente");
-      
-      // ✅ FORZAR REDIRECCIÓN INMEDIATA
-      setTimeout(() => {
-        window.location.href = "/profile";
-      }, 100);
+      // Llamar a onLogin del padre
+      onLogin(newCustomerWithStats);
     } else {
       setError(result?.message || "No se pudo crear la cuenta");
     }
@@ -265,13 +245,29 @@ const Login = () => {
               <form onSubmit={handleLogin}>
                 <div style={{ marginBottom: 12 }}>
                   <label style={styles.label}>Email</label>
-                  <input style={styles.input} type="email" required placeholder="tu@email.com" value={loginData.email} onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} />
+                  <input 
+                    style={styles.input} 
+                    type="email" 
+                    required 
+                    placeholder="admin@mail.com" 
+                    value={loginData.email} 
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} 
+                  />
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={styles.label}>Clave</label>
                   <div style={styles.inputWrap}>
-                    <input style={{ ...styles.input, paddingRight: "38px" }} type={showLoginPass ? "text" : "password"} required placeholder="••••••••" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} />
-                    <button type="button" style={styles.eyeBtn} onClick={() => setShowLoginPass((s) => !s)}>{showLoginPass ? "🙈" : "👁️"}</button>
+                    <input 
+                      style={{ ...styles.input, paddingRight: "38px" }} 
+                      type={showLoginPass ? "text" : "password"} 
+                      required 
+                      placeholder="••••••••" 
+                      value={loginData.password} 
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} 
+                    />
+                    <button type="button" style={styles.eyeBtn} onClick={() => setShowLoginPass((s) => !s)}>
+                      {showLoginPass ? "🙈" : "👁️"}
+                    </button>
                   </div>
                 </div>
                 <button type="submit" style={styles.mainBtn}>Iniciar Sesión</button>

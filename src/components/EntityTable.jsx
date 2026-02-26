@@ -12,7 +12,6 @@ const CustomSwitch = ({
   inactiveColor = "#ef4444"
 }) => {
   if (!toggleAction) return null;
-  
   return (
     <div
       style={{
@@ -68,7 +67,6 @@ const EntityTable = ({
   const getEstadoField = () => {
     return estadoField || isActiveField || "estado";
   };
-
   const isAdministrador = (row) =>
     isAdministradorCheck ? isAdministradorCheck(row) : false;
 
@@ -134,7 +132,7 @@ const EntityTable = ({
                 row[getEstadoField()] === 1 ||
                 row[getEstadoField()] === "Activo" ||
                 row[getEstadoField()] === "Completada";
-              
+
               const admin = isAdministrador(row);
               const showSwitch = moduleType !== "ventas" && moduleType !== "compras";
               const toggleAction = showSwitch ? (isCurrentlyActive ? onAnular : onReactivar) : null;
@@ -181,7 +179,7 @@ const EntityTable = ({
                           color: "#fff",
                           textAlign: col.align || "left",
                         }}
-                        title={typeof content === "string" ? content : ""}
+                        title={typeof content === "string" ? content : " "}
                       >
                         {content}
                       </td>

@@ -1,11 +1,11 @@
-// src/pages/admin/Categorias.jsx
+// src/pages/admin/CategoriasPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import Alert from '../../components/Alert';
 import SearchInput from '../../components/SearchInput';
 import UniversalModal from '../../components/UniversalModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { initialCategories } from '../../data';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaEye, FaEdit, FaTrash, FaBan } from 'react-icons/fa';
 
 const CategoriasPage = () => {
   // =============== ESTADOS ===============
@@ -18,26 +18,26 @@ const CategoriasPage = () => {
   const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, category: null });
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
-  // ELIMINADO: const [selectedImageIndex, setSelectedImageIndex] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [_selectedImageIndex, setSelectedImageIndex] = useState(null);
+  const [_imageUrl, setImageUrl] = useState('');
 
   const ITEMS_PER_PAGE = 3;
 
   const imgPorCategoria = {
-    "NIKE 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762950188/gorrarojaymorada9_sufoqt.jpg",
-    "A/N 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988183/negraconelescudo_zzh4l9.jpg",
-    "BEISBOLERA PREMIUM": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910786/gorraazulblancoLA_rembf2.jpg",
-    "DIAMANTE IMPORTADA": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914412/gorraconrosas_ko3326.jpg",
-    "EQUINAS-AGROPECUARIAS": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762916288/gorraazulcerdoverde_e10kc7.jpg",
-    "EXCLUSIVA 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762956762/gorranube_jrten0.jpg",
-    "MONASTERY 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957919/gorramonasterygris_ij6ksq.jpg",
-    "MULTIMARCA": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957956/gorrablancachromebeart_amqbro.jpg",
-    "PLANA CERRADA 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988576/gorranegrajordan_arghad.jpg",
-    "PLANA IMPORTADA": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762995130/gorranegraAA_zkdg1e.jpg",
-    "PORTAGORRAS": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762994460/portagorras-1sencillo_xxe5hf.jpg",
-    "PREMIUM": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762987076/gorrahugoboss_ev6z54.jpg",
-    "camisetas": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1763002983/TALLA_M_3_youtflecha_hphfng.jpg",
-    "default": "https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1000&q=80",
+    "NIKE 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762950188/gorrarojaymorada9_sufoqt.jpg  ",
+    "A/N 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988183/negraconelescudo_zzh4l9.jpg  ",
+    "BEISBOLERA PREMIUM": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910786/gorraazulblancoLA_rembf2.jpg  ",
+    "DIAMANTE IMPORTADA": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914412/gorraconrosas_ko3326.jpg  ",
+    "EQUINAS-AGROPECUARIAS": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762916288/gorraazulcerdoverde_e10kc7.jpg  ",
+    "EXCLUSIVA 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762956762/gorranube_jrten0.jpg  ",
+    "MONASTERY 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957919/gorramonasterygris_ij6ksq.jpg  ",
+    "MULTIMARCA": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957956/gorrablancachromebeart_amqbro.jpg  ",
+    "PLANA CERRADA 1.1": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988576/gorranegrajordan_arghad.jpg  ",
+    "PLANA IMPORTADA": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762995130/gorranegraAA_zkdg1e.jpg  ",
+    "PORTAGORRAS": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762994460/portagorras-1sencillo_xxe5hf.jpg  ",
+    "PREMIUM": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762987076/gorrahugoboss_ev6z54.jpg  ",
+    "camisetas": "https://res.cloudinary.com/dxc5qqsjd/image/upload/v1763002983/TALLA_M_3_youtflecha_hphfng.jpg  ",
+    "default": "https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1000&q=80  ",
   };
 
   // =============== EFECTOS ===============
@@ -113,12 +113,13 @@ const CategoriasPage = () => {
   const openModal = (mode = 'create', category = null) => {
     setModalState({ isOpen: true, mode, category });
     setErrors({});
-    // ELIMINADO: setSelectedImageIndex(null);
-    setSelectedFile(null);
+    setSelectedImageIndex(null);
+    setImageUrl('');
     if (category && (mode === 'edit' || mode === 'view')) {
       setFormData({
         nombre: category.nombre || '',
         descripcion: category.descripcion || '',
+        imagenUrl: category.imagenUrl || '',
         estado: category.estado || 'Activo',
         isActive: category.isActive !== undefined ? category.isActive : true
       });
@@ -126,6 +127,7 @@ const CategoriasPage = () => {
       setFormData({
         nombre: '',
         descripcion: '',
+        imagenUrl: '',
         estado: 'Activo',
         isActive: true
       });
@@ -136,8 +138,8 @@ const CategoriasPage = () => {
     setModalState({ isOpen: false, mode: 'view', category: null });
     setFormData({});
     setErrors({});
-    // ELIMINADO: setSelectedImageIndex(null);
-    setSelectedFile(null);
+    setSelectedImageIndex(null);
+    setImageUrl('');
   };
 
   const openDeleteModal = (category) => {
@@ -161,17 +163,6 @@ const CategoriasPage = () => {
       });
     }
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        showAlert('Por favor seleccione un archivo de imagen válido.', 'error');
-        return;
-      }
-      setSelectedFile(file);
-    }
   };
 
   // =============== RENDER FIELD ===============
@@ -217,7 +208,7 @@ const CategoriasPage = () => {
       const actualFieldName = fieldMap[fieldName] || fieldName;
       let displayValue = category?.[actualFieldName] || 'N/A';
 
-      if (fieldName === 'imagenUrl' || fieldName === 'Importar Imagen') {
+      if (fieldName === 'imagenUrl' || fieldName === 'URL de Imagen (opcional)') {
         const imageUrl = category?.imagenUrl || imgPorCategoria.default;
         return (
           <div>
@@ -347,16 +338,13 @@ const CategoriasPage = () => {
       return;
     }
 
-    const { nombre, descripcion, estado } = formData;
-    let imagenUrl = imgPorCategoria.default;
-    if (selectedFile) {
-      imagenUrl = URL.createObjectURL(selectedFile);
-    }
+    const { nombre, descripcion, estado, imagenUrl } = formData;
+    const finalImagenUrl = imagenUrl || imgPorCategoria.default;
 
     const updatedData = {
       nombre,
       descripcion,
-      imagenUrl,
+      imagenUrl: finalImagenUrl,
       estado: modalState.mode === 'create' ? 'Activo' : estado,
       isActive: modalState.mode === 'create' ? true : estado === 'Activo',
     };
@@ -495,20 +483,6 @@ const CategoriasPage = () => {
       onMouseEnter={(e) => e.currentTarget.style.borderColor = '#333'}
       onMouseLeave={(e) => e.currentTarget.style.borderColor = '#222'}
       >
-        <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
-          <span style={{
-            padding: "6px 10px",
-            fontSize: "11px",
-            fontWeight: "700",
-            borderRadius: "20px",
-            backgroundColor: isActive ? "#10B981" : "#EF4444",
-            color: "#000000",
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}>
-            {isActive ? 'Activo' : 'Inactivo'}
-          </span>
-        </div>
         <div style={{
           width: '100%',
           height: '150px',
@@ -545,18 +519,35 @@ const CategoriasPage = () => {
           )}
         </div>
         <div style={{ flex: 1, marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '0', overflow: 'hidden' }}>
-          <h3 style={{
-            color: '#F5C81B',
-            fontSize: '16px',
-            fontWeight: '700',
-            margin: '0',
-            lineHeight: '1.3',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}>
-            {category.nombre}
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h3 style={{
+              color: '#F5C81B',
+              fontSize: '16px',
+              fontWeight: '700',
+              margin: '0',
+              lineHeight: '1.3',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              flex: '1 1 auto',
+              minWidth: '0',
+            }}>
+              {category.nombre}
+            </h3>
+            <span style={{
+              padding: "4px 8px",
+              fontSize: "10px",
+              fontWeight: "700",
+              borderRadius: "12px",
+              backgroundColor: isActive ? "#10B981" : "#EF4444",
+              color: "#000000",
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              flexShrink: '0',
+            }}>
+              {isActive ? 'Activo' : 'Inactivo'}
+            </span>
+          </div>
           <p style={{
             color: '#ffffff',
             fontSize: '13px',
@@ -575,10 +566,97 @@ const CategoriasPage = () => {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
           <div style={{ display: 'flex', gap: '6px', justifyContent: 'space-between' }}>
-            <button onClick={() => openModal('view', category)} style={{ flex:1, backgroundColor:'transparent', border:'1px solid #3b82f6', color:'#3b82f6', padding:'6px 4px', borderRadius:'4px', fontSize:'11px', fontWeight:'600', cursor:'pointer', height:'30px' }} onMouseEnter={e=>{e.target.style.backgroundColor='#3b82f6';e.target.style.color='#000'}} onMouseLeave={e=>{e.target.style.backgroundColor='transparent';e.target.style.color='#3b82f6'}}>Ver</button>
-            <button onClick={() => openModal('edit', category)} style={{ flex:1, backgroundColor:'transparent', border:'1px solid #F5C81B', color:'#F5C81B', padding:'6px 4px', borderRadius:'4px', fontSize:'11px', fontWeight:'600', cursor:'pointer', height:'30px' }} onMouseEnter={e=>{e.target.style.backgroundColor='#F5C81B';e.target.style.color='#000'}} onMouseLeave={e=>{e.target.style.backgroundColor='transparent';e.target.style.color='#F5C81B'}}>Editar</button>
-            <button onClick={() => openDeleteModal(category)} style={{ flex:1, backgroundColor:'transparent', border:'1px solid #ef4444', color:'#ef4444', padding:'6px 4px', borderRadius:'4px', fontSize:'11px', fontWeight:'600', cursor:'pointer', height:'30px' }} onMouseEnter={e=>{e.target.style.backgroundColor='#ef4444';e.target.style.color='#000'}} onMouseLeave={e=>{e.target.style.backgroundColor='transparent';e.target.style.color='#ef4444'}}>Eliminar</button>
+            <button 
+              onClick={() => openModal('view', category)} 
+              style={{ 
+                flex: 1, 
+                backgroundColor: 'transparent', 
+                border: '1px solid #3b82f6', 
+                color: '#3b82f6', 
+                padding: '6px 4px', 
+                borderRadius: '4px', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                cursor: 'pointer', 
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} 
+              onMouseEnter={e => {
+                e.target.style.backgroundColor = '#3b82f6';
+                e.target.style.color = '#000';
+              }} 
+              onMouseLeave={e => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = '#3b82f6';
+              }}
+              title="Ver"
+            >
+              <FaEye size={14} />
+            </button>
+            
+            <button 
+              onClick={() => openModal('edit', category)} 
+              style={{ 
+                flex: 1, 
+                backgroundColor: 'transparent', 
+                border: '1px solid #F5C81B', 
+                color: '#F5C81B', 
+                padding: '6px 4px', 
+                borderRadius: '4px', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                cursor: 'pointer', 
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} 
+              onMouseEnter={e => {
+                e.target.style.backgroundColor = '#F5C81B';
+                e.target.style.color = '#000';
+              }} 
+              onMouseLeave={e => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = '#F5C81B';
+              }}
+              title="Editar"
+            >
+              <FaEdit size={14} />
+            </button>
+            
+            <button 
+              onClick={() => openDeleteModal(category)} 
+              style={{ 
+                flex: 1, 
+                backgroundColor: 'transparent', 
+                border: '1px solid #ef4444', 
+                color: '#ef4444', 
+                padding: '6px 4px', 
+                borderRadius: '4px', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                cursor: 'pointer', 
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} 
+              onMouseEnter={e => {
+                e.target.style.backgroundColor = '#ef4444';
+                e.target.style.color = '#000';
+              }} 
+              onMouseLeave={e => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = '#ef4444';
+              }}
+              title="Eliminar"
+            >
+              <FaTrash size={14} />
+            </button>
           </div>
+          
           <button
             onClick={() => handleToggleStatus(category.id)}
             style={{
@@ -588,10 +666,14 @@ const CategoriasPage = () => {
               color: isActive ? '#F5C81B' : '#000000',
               padding: '6px 4px',
               borderRadius: '4px',
-              fontSize: '11px',
+              fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
-              height: '30px'
+              height: '30px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
             onMouseEnter={(e) => {
               if (isActive) {
@@ -615,8 +697,10 @@ const CategoriasPage = () => {
                 e.target.style.color = '#000000';
               }
             }}
+            title={isActive ? 'Desactivar' : 'Activar'}
           >
-            {isActive ? 'Desactivar' : 'Activar'}
+            <FaBan size={14} />
+            <span style={{ fontSize: '11px' }}>{isActive ? 'Desactivar' : 'Activar'}</span>
           </button>
         </div>
       </div>
@@ -691,7 +775,7 @@ const CategoriasPage = () => {
         />
       )}
 
-      {/* CONTENEDOR PRINCIPAL — igual que antes, pero sin AdminLayoutClean */}
+      {/* CONTENEDOR PRINCIPAL */}
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column',
@@ -825,7 +909,7 @@ const CategoriasPage = () => {
         </div>
       </div>
 
-      {/* MODALES — sin cambios */}
+      {/* MODALES */}
       <UniversalModal
         isOpen={modalState.isOpen}
         onClose={closeModal}
@@ -876,41 +960,45 @@ const CategoriasPage = () => {
               marginBottom: '2px',
               display: 'block'
             }}>
-              Importar Imagen :
+              URL de Imagen (opcional):
             </label>
-            <div style={{
-              backgroundColor: '#1e293b',
-              border: '1px solid #334155',
-              borderRadius: '6px',
-              padding: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow: 'ellipsis'
-            }}
-            onClick={() => document.getElementById('fileInput').click()}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5C81B" strokeWidth="2">
-                <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span style={{
-                color: selectedFile ? '#F5C81B' : '#94a3b8',
-                fontSize: '13px',
-                fontWeight: selectedFile ? '600' : '400'
-              }}>
-                {selectedFile ? selectedFile.name : 'Haz clic para seleccionar un archivo...'}
-              </span>
-            </div>
             <input
-              id="fileInput"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
+              type="text"
+              value={formData.imagenUrl || ''}
+              onChange={(e) => handleInputChange('imagenUrl', e.target.value)}
+              placeholder="https://ejemplo.com/imagen.jpg"
+              style={{
+                backgroundColor: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                color: '#f1f5f9',
+                fontSize: '13px',
+                width: '100%',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
             />
+            {formData.imagenUrl && (
+              <div style={{
+                marginTop: '8px',
+                width: '100%',
+                height: '100px',
+                backgroundColor: '#000000',
+                borderRadius: '6px',
+                backgroundImage: `url(${formData.imagenUrl})`,
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                border: '1px solid #334155',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden',
+              }}>
+                <span style={{ color: '#94a3b8', fontSize: '11px' }}>Vista previa</span>
+              </div>
+            )}
           </div>
           {modalState.mode === 'edit' && (
             <div>
