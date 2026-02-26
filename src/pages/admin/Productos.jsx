@@ -1,6 +1,5 @@
 // src/pages/admin/ProductosPage.jsx
 import React, { useState, useEffect } from "react";
-// REMOVER: import AdminLayoutClean from "./AdminLayoutClean"; // QUITA ESTA LÍNEA
 import EntityTable from "../../components/EntityTable";
 import SearchInput from "../../components/SearchInput";
 import Alert from "../../components/Alert";
@@ -129,12 +128,7 @@ const ProductosPage = () => {
     setImages(prev => [...prev, ...newImages]);
   };
 
-  const removeImage = (index) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-    if (currentImageIndex >= index && currentImageIndex > 0) {
-      setCurrentImageIndex(prev => prev - 1);
-    }
-  };
+  // ELIMINADO: const removeImage = (index) => { ... } - no se usa
 
   const nextImage = () => {
     const totalImages = images.length || (formData.imagenes ? formData.imagenes.length : 0);
@@ -760,8 +754,6 @@ const ProductosPage = () => {
   // ====== RENDER ======
   return (
     <>
-      {/* REMOVER: <AdminLayoutClean> QUITA ESTE WRAPPER */}
-
       {alert.show && (
         <Alert
           message={alert.message}
@@ -1151,8 +1143,6 @@ const ProductosPage = () => {
           )}
         </div>
       </UniversalModal>
-
-      {/* REMOVER: </AdminLayoutClean> QUITA ESTE CIERRE */}
     </>
   );
 };

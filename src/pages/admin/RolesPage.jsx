@@ -8,7 +8,7 @@ import Alert from "../../components/Alert";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 
 // =============================================
-// COMPONENTE StatusFilter (igual que antes)
+// COMPONENTE StatusFilter
 // =============================================
 const StatusFilter = ({ filterStatus, onFilterSelect }) => {
   const [open, setOpen] = useState(false);
@@ -109,7 +109,7 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
 };
 
 // =============================================
-// COMPONENTE FormField (modificado para coincidir con Compras)
+// COMPONENTE FormField (modificado para errores sin scroll)
 // =============================================
 const FormField = ({ label, required, children, error, isViewMode = false, viewValue }) => {
   if (isViewMode) {
@@ -136,12 +136,25 @@ const FormField = ({ label, required, children, error, isViewMode = false, viewV
   }
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
       <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>
         {label}: {required && <span style={{ color: '#ef4444' }}>*</span>}
       </label>
       {children}
-      {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
+      {error && (
+        <div style={{ 
+          color: '#f87171', 
+          fontSize: '10px', 
+          marginTop: '2px',
+          height: '14px',
+          lineHeight: '14px',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          textOverflow: 'ellipsis'
+        }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 };
@@ -404,12 +417,13 @@ const RolesPage = () => {
     setCurrentPage(1);
   };
 
-  // ── Render permisos
+  // ── Render permisos (MODIFICADO: 2 columnas, sin fondo azul)
   const renderPermissionsColumns = (permissions, readOnly = false, isAdmin = false) => {
-    const numColumns = isAdmin ? 2 : 3;
+    // Mostrar en 2 columnas siempre
+    const numColumns = 2;
     const permissionsPerColumn = Math.ceil(availablePermissions.length / numColumns);
     
-    return [0, 1, 2].slice(0, numColumns).map((colIndex) => {
+    return [0, 1].map((colIndex) => {
       const start = colIndex * permissionsPerColumn;
       const end = start + permissionsPerColumn;
       const columnPermissions = availablePermissions.slice(start, end);
@@ -420,9 +434,8 @@ const RolesPage = () => {
           style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '8px',
+            gap: '6px',
             flex: 1,
-            padding: '8px 0',
           }}
         >
           {columnPermissions.map((p) => {
@@ -434,13 +447,15 @@ const RolesPage = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  color: '#cbd5e1',
+                  gap: '6px',
+                  color: isChecked ? '#F5C81B' : '#94a3b8',
                   cursor: readOnly ? 'default' : 'pointer',
-                  fontSize: '12px',
-                  padding: '2px 0',
-                  minHeight: '22px',
+                  fontSize: '11px',
+                  padding: '2px 4px',
+                  minHeight: '20px',
                   width: '100%',
+                  backgroundColor: 'transparent', // SIN FONDO AZUL
+                  borderRadius: '4px',
                 }}
               >
                 <input
@@ -462,19 +477,18 @@ const RolesPage = () => {
                   }}
                   disabled={readOnly || isAdmin}
                   style={{
-                    accentColor: isChecked ? '#F5C81B' : '#64748b',
-                    width: '14px',
-                    height: '14px',
+                    accentColor: '#F5C81B',
+                    width: '12px',
+                    height: '12px',
                     cursor: readOnly || isAdmin ? 'default' : 'pointer',
                     flexShrink: 0,
-                    opacity: isChecked ? 1 : 0.6
                   }}
                 />
 
                 <span
                   style={{
-                    color: isAdmin ? '#F5C81B' : '#cbd5e1',
-                    fontWeight: isAdmin ? '600' : '400',
+                    color: isChecked ? '#F5C81B' : '#94a3b8',
+                    fontWeight: isChecked ? '500' : '400',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -483,22 +497,6 @@ const RolesPage = () => {
                 >
                   {p.label}
                 </span>
-
-                {isAdmin && (
-                  <span
-                    style={{
-                      marginLeft: 'auto',
-                      fontSize: '10px',
-                      color: '#10b981',
-                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                      padding: '1px 4px',
-                      borderRadius: '3px',
-                      flexShrink: 0,
-                    }}
-                  >
-                    ✓
-                  </span>
-                )}
               </label>
             );
           })}
@@ -507,7 +505,7 @@ const RolesPage = () => {
     });
   };
 
-  // ── Render modal (MODIFICADO para coincidir con Compras)
+  // ── Render modal (MODIFICADO: botones más pequeños)
   const renderModalContent = () => {
     const isView = modalMode === 'details';
     const isEdit = modalMode === 'edit';
@@ -518,9 +516,9 @@ const RolesPage = () => {
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '12px'
+        gap: '10px'
       }}>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: 2 }}>
             <FormField 
               label="Nombre" 
@@ -545,10 +543,10 @@ const RolesPage = () => {
                     background: '#1e293b', 
                     color: '#fff', 
                     border: fieldErrors.name ? '1px solid #ef4444' : '1px solid #334155',
-                    height: '32px', 
+                    height: '30px', 
                     borderRadius: '4px',
-                    padding: '0 8px',
-                    fontSize: '13px',
+                    padding: '0 6px',
+                    fontSize: '12px',
                     outline: 'none'
                   }}
                 />
@@ -583,17 +581,17 @@ const RolesPage = () => {
                 background: '#1e293b', 
                 color: '#fff', 
                 border: '1px solid #334155',
-                height: '32px', 
+                height: '30px', 
                 borderRadius: '4px',
-                padding: '0 8px',
-                fontSize: '13px',
+                padding: '0 6px',
+                fontSize: '12px',
                 outline: 'none'
               }}
             />
           )}
         </FormField>
 
-        <div>
+        <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
             <label style={{ fontSize: '12px', color: '#e2e8f0' }}>
               Permisos: {!isView && <span style={{ color: '#ef4444' }}>*</span>}
@@ -603,11 +601,11 @@ const RolesPage = () => {
           <div style={{
             display: 'flex',
             gap: '16px',
-            backgroundColor: "#1e293b", 
-            border: "1px solid #334155", 
-            borderRadius: "6px",
-            padding: "12px",
-            minHeight: '140px',
+            backgroundColor: "#1a1a1a", // Fondo más oscuro
+            border: "1px solid #333", 
+            borderRadius: "4px",
+            padding: "10px",
+            minHeight: '120px',
             overflowY: 'auto'
           }}>
             {renderPermissionsColumns(
@@ -618,20 +616,31 @@ const RolesPage = () => {
           </div>
           
           {!isView && fieldErrors.permissions && (
-            <div style={{ color: '#f87171', fontSize: '11px', marginTop: '4px' }}>
+            <div style={{ 
+              color: '#f87171', 
+              fontSize: '10px', 
+              marginTop: '2px',
+              height: '14px',
+              lineHeight: '14px',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis'
+            }}>
               Debe seleccionar al menos un permiso
             </div>
           )}
           
           {isAdmin && (
             <div style={{
-              marginTop: '8px',
-              padding: '6px 10px',
+              marginTop: '4px',
+              padding: '4px 8px',
               backgroundColor: 'rgba(245, 200, 27, 0.1)',
               border: '1px solid rgba(245, 200, 27, 0.3)',
               borderRadius: '4px',
-              fontSize: '11px',
+              fontSize: '10px',
               color: '#F5C81B',
+              lineHeight: '1.3',
+              minHeight: '20px'
             }}>
               ⓘ El rol Administrador tiene todos los permisos del sistema.
             </div>
@@ -644,21 +653,21 @@ const RolesPage = () => {
             justifyContent: 'flex-end', 
             gap: '8px',
             marginTop: '8px',
-            paddingTop: '12px',
-            borderTop: '1px solid #334155'
+            paddingTop: '8px',
+            borderTop: '1px solid #333'
           }}>
             <button
               onClick={closeModal}
               style={{
                 background: 'transparent',
-                border: '1px solid #94a3b8',
-                color: '#94a3b8',
-                padding: '6px 16px',
+                border: '1px solid #666',
+                color: '#aaa',
+                padding: '4px 12px',
                 borderRadius: '4px',
-                fontSize: '12px',
+                fontSize: '11px',
                 cursor: 'pointer',
-                minWidth: '90px',
-                height: '34px'
+                minWidth: '70px',
+                height: '28px'
               }}
             >
               Cancelar
@@ -669,13 +678,13 @@ const RolesPage = () => {
                 background: '#F5C81B',
                 color: '#000',
                 border: 'none',
-                padding: '6px 16px',
+                padding: '4px 12px',
                 borderRadius: '4px',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                minWidth: '100px',
-                height: '34px'
+                minWidth: '80px',
+                height: '28px'
               }}
             >
               {isCreate ? 'Guardar' : 'Actualizar'}
@@ -800,10 +809,10 @@ const RolesPage = () => {
                 tableLayout: 'fixed',
               }}
               headerStyle={{
-                padding: '12px 16px',
+                padding: '10px 12px',
                 textAlign: 'left',
                 fontWeight: '600',
-                fontSize: '13px',
+                fontSize: '12px',
                 color: '#F5C81B',
                 borderBottom: '1px solid #F5C81B',
                 backgroundColor: '#151822',
@@ -817,7 +826,7 @@ const RolesPage = () => {
                 transition: 'background-color 0.2s'
               }}
               cellStyle={{
-                padding: '12px 16px',
+                padding: '10px 12px',
                 verticalAlign: 'middle'
               }}
             />
@@ -889,7 +898,7 @@ const RolesPage = () => {
         </div>
       </div>
 
-      {/* MODAL - MÁS ESTRECHO, NEGRO Y BORDE AMARILLO DELGADO COMO EN COMPRAS */}
+      {/* MODAL - MÁS ESTRECHO, NEGRO Y BORDE AMARILLO DELGADO */}
       <UniversalModal 
         isOpen={isModalOpen} 
         onClose={closeModal} 
@@ -919,10 +928,10 @@ const RolesPage = () => {
           },
           content: { 
             padding: '16px',
-            backgroundColor: '#111827', // Fondo negro
-            border: '1px solid #F5C81B', // Borde amarillo delgado
+            backgroundColor: '#000',
+            border: '0.5px solid #F5C81B',
             borderRadius: '8px',
-            maxWidth: '500px', // Más estrecho que antes (era 600px)
+            maxWidth: '360px',
             width: '90%',
             maxHeight: '80vh',
             overflowY: 'auto',

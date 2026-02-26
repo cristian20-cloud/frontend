@@ -13,8 +13,6 @@ import {
   Pie,
   Cell,
   Legend,
-  AreaChart,
-  Area
 } from "recharts";
 import { FaCalendarAlt } from "react-icons/fa";
 import { initialSales, initialOrders, initialCustomers } from "../../data";
@@ -46,7 +44,9 @@ const getAvailableYears = (salesData, ordersData) => {
         if (date && !isNaN(date.getTime())) {
           yearsSet.add(date.getFullYear());
         }
-      } catch (error) {}
+      } catch {
+        // Ignorar errores de parseo de fechas
+      }
     }
   });
   ordersData?.forEach(order => {
@@ -56,7 +56,9 @@ const getAvailableYears = (salesData, ordersData) => {
         if (!isNaN(date.getTime())) {
           yearsSet.add(date.getFullYear());
         }
-      } catch (error) {}
+      } catch {
+        // Ignorar errores de parseo de fechas
+      }
     }
   });
   for (let i = currentYear - 5; i <= currentYear + 2; i++) {
@@ -102,7 +104,7 @@ const AdminDashboard = () => {
     if (years.length > 0 && !years.includes(selectedYear)) {
       setSelectedYear(years[0]);
     }
-  }, []);
+  }, [selectedYear]);
 
   // ======================================================
   // FILTRO POR FECHA, MES/AÑO Y BÚSQUEDA
@@ -947,7 +949,7 @@ const AdminDashboard = () => {
             />
             {searchTerm && (
               <span className="search-info">
-                Buscando: "{searchTerm}"
+                Buscando: &quot;{searchTerm}&quot;
               </span>
             )}
           </div>
@@ -969,7 +971,7 @@ const AdminDashboard = () => {
               </div>
               <div className="kpi-info">
                 {filteredSales.filter(s => s.estado === "Completada" && s.isActive).length} ventas
-                {searchTerm && ` que coinciden con "${searchTerm}"`}
+                {searchTerm && ` que coinciden con &quot;${searchTerm}&quot;`}
               </div>
             </div>
           </div>
@@ -986,7 +988,7 @@ const AdminDashboard = () => {
             </div>
             <div className="kpi-info">
               {filteredOrders.filter(o => o.estado === "Activo" && o.isActive).length} compras
-              {searchTerm && ` que coinciden con "${searchTerm}"`}
+              {searchTerm && ` que coinciden con &quot;${searchTerm}&quot;`}
             </div>
           </div>
           <div className="kpi-card kpi-card-customers">
@@ -1018,7 +1020,7 @@ const AdminDashboard = () => {
                 <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
                   {selectedYear ? `Año: ${selectedYear}` : ''} 
                   {selectedYear && (searchTerm || startDate || endDate) ? ' | ' : ''}
-                  {searchTerm ? `Búsqueda: "${searchTerm}"` : ''}
+                  {searchTerm ? `Búsqueda: &quot;${searchTerm}&quot;` : ''}
                   {(searchTerm && (startDate || endDate)) ? ' | ' : ''}
                   {startDate || endDate ? `Fechas: ${startDate || 'Inicio'} - ${endDate || 'Fin'}` : ''}
                 </span>
@@ -1067,7 +1069,7 @@ const AdminDashboard = () => {
                 <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
                   {selectedYear ? `Año: ${selectedYear}` : ''} 
                   {selectedYear && (searchTerm || startDate || endDate) ? ' | ' : ''}
-                  {searchTerm ? `Búsqueda: "${searchTerm}"` : ''}
+                  {searchTerm ? `Búsqueda: &quot;${searchTerm}&quot;` : ''}
                   {(searchTerm && (startDate || endDate)) ? ' | ' : ''}
                   {startDate || endDate ? `Fechas: ${startDate || 'Inicio'} - ${endDate || 'Fin'}` : ''}
                 </span>
@@ -1189,7 +1191,7 @@ const AdminDashboard = () => {
           </div>
           {productSearch && (
             <div className="product-search-info">
-              Buscando: "{productSearch}" • {getAllTopProducts.filter(p => 
+              Buscando: &quot;{productSearch}&quot; • {getAllTopProducts.filter(p => 
                 p.nombre.toLowerCase().includes(productSearch.toLowerCase())
               ).length} productos encontrados
             </div>
@@ -1265,7 +1267,7 @@ const AdminDashboard = () => {
             ) : (
               <div className="empty-state">
                 <div className="empty-state-icon">🔍</div>
-                <p>No se encontraron productos que coincidan con "{productSearch}" o no hay datos de ventas.</p>
+                <p>No se encontraron productos que coincidan con &quot;{productSearch}&quot; o no hay datos de ventas.</p>
                 <button 
                   onClick={() => { setProductSearch(""); resetFilters(); }}
                   className="clear-product-search"
@@ -1280,7 +1282,7 @@ const AdminDashboard = () => {
             <span>Total ventas productos: {formatCurrency(pieChartProductsData.reduce((sum, p) => sum + p.total, 0))}</span>
             <span>Productos únicos mostrados: {pieChartProductsData.length}</span>
             <span>
-              {productSearch ? `Búsqueda: "${productSearch}"` : 'Mostrando top 5 productos'}
+              {productSearch ? `Búsqueda: &quot;${productSearch}&quot;` : 'Mostrando top 5 productos'}
             </span>
           </div>
         </div>

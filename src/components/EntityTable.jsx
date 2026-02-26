@@ -4,15 +4,15 @@ import { FaEye, FaEdit, FaTrash, FaBan } from "react-icons/fa";
 // ==============================================
 // COMPONENTE: SWITCH PERSONALIZADO (PEQUEÑO)
 // ==============================================
-const CustomSwitch = ({ 
-  isCurrentlyActive, 
-  toggleAction, 
+const CustomSwitch = ({
+  isCurrentlyActive,
+  toggleAction,
   toggleTitle,
-  activeColor = "#10b981",   // Color verde por defecto cuando está activo
-  inactiveColor = "#ef4444"  // Color rojo por defecto cuando está inactivo
+  activeColor = "#10b981",
+  inactiveColor = "#ef4444"
 }) => {
   if (!toggleAction) return null;
-
+  
   return (
     <div
       style={{
@@ -61,39 +61,12 @@ const EntityTable = ({
   onReactivar,
   estadoField = "estado",
   moduleType = "generic",
-  hideActionsForCanceled = false,
   isAdministradorCheck = null,
   isActiveField,
   switchProps = {},
 }) => {
   const getEstadoField = () => {
     return estadoField || isActiveField || "estado";
-  };
-
-  const isAnulada = (row) => {
-    const fieldName = getEstadoField();
-    const estado = row[fieldName];
-
-    if (typeof estado === "boolean") return !estado;
-    if (typeof estado === "number") return estado === 0;
-
-    if (moduleType === "ventas") return estado === "Anulada" || estado === "Cancelada";
-    if (moduleType === "compras") return estado === "Anulada";
-    
-    if (moduleType === "generic") {
-      return (
-        estado === "Anulada" ||
-        estado === "Cancelada" ||
-        estado === "Inactivo" ||
-        estado === "Inactiva" ||
-        estado === "inactivo" ||
-        estado === "deshabilitado" ||
-        estado === "Deshabilitado" ||
-        estado === "desactivado"
-      );
-    }
-
-    return estado === "Anulada" || estado === "Cancelada" || estado === "Inactivo";
   };
 
   const isAdministrador = (row) =>
@@ -139,7 +112,6 @@ const EntityTable = ({
             </th>
           </tr>
         </thead>
-
         <tbody>
           {entities.length === 0 ? (
             <tr>
@@ -163,7 +135,6 @@ const EntityTable = ({
                 row[getEstadoField()] === "Activo" ||
                 row[getEstadoField()] === "Completada";
               
-              const esAnulada = isAnulada(row);
               const admin = isAdministrador(row);
               const showSwitch = moduleType !== "ventas" && moduleType !== "compras";
               const toggleAction = showSwitch ? (isCurrentlyActive ? onAnular : onReactivar) : null;
@@ -233,71 +204,63 @@ const EntityTable = ({
                       }}
                     >
                       {admin ? (
-                        // SOLO MUESTRA EL OJO PARA ADMINISTRADORES
                         <>
                           {onView && (
                             <FaEye
                               size={18}
-                              color={"#F5C81B"}
+                              color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onView(row)}
                               title="Ver detalles"
                             />
                           )}
-                          
                         </>
                       ) : (
-                        // USUARIO NO ADMINISTRADOR - TODAS LAS ACCIONES
                         <>
-                          {/* PRIMERO EL TOGGLE (SWITCH) */}
                           {showSwitch && toggleAction && (
                             <CustomSwitch
                               isCurrentlyActive={isCurrentlyActive}
                               toggleAction={() => toggleAction(row)}
                               toggleTitle={isCurrentlyActive ? "Desactivar" : "Reactivar"}
-                              activeColor={switchProps.activeColor}   // Usar color activo desde props
-                              inactiveColor={switchProps.inactiveColor} // Usar color inactivo desde props
+                              activeColor={switchProps.activeColor}
+                              inactiveColor={switchProps.inactiveColor}
                             />
                           )}
 
-                          {/* LUEGO EL BOTÓN DE VER (OJO) */}
                           {onView && (
                             <FaEye
                               size={18}
-                              color={"#F5C81B"}
+                              color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onView(row)}
                               title="Ver detalles"
                             />
                           )}
 
-                          {/* BOTÓN EDITAR - SOLO SI NO ES VENTAS NI COMPRAS */}
                           {onEdit && moduleType !== "ventas" && moduleType !== "compras" && (
                             <FaEdit
                               size={18}
-                              color={"#F5C81B"}
+                              color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onEdit(row)}
                               title="Editar"
                             />
                           )}
 
-                          {/* BOTÓN DE ANULAR SOLO PARA VENTAS/COMPRAS */}
                           {onAnular && (moduleType === "ventas" || moduleType === "compras") && (
                             <FaBan
                               size={18}
-                              color={"#F5C81B"}
+                              color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onAnular(row)}
                               title="Anular"
                             />
                           )}
 
-                          {/* BOTÓN DE ELIMINAR */}
                           {onDelete && moduleType !== "ventas" && moduleType !== "compras" && (
                             <FaTrash
                               size={18}
-                              color={"#F5C81B"}
+                              color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onDelete(row)}
                               title="Eliminar"

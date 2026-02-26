@@ -1,7 +1,8 @@
 // src/pages/Categorias.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { initialCategories } from "../data";
+import { initialCategories } from '../data';
+
 import Footer from "../components/Footer";
 
 // Imágenes optimizadas para cada categoría
@@ -126,7 +127,7 @@ const Categorias = () => {
           maxWidth: '1200px',
           marginBottom: '20px'
         }}>
-          Buscando: "{searchQuery}"
+          Buscando: {searchQuery}
         </div>
       )}
 
@@ -137,7 +138,7 @@ const Categorias = () => {
             const imgUrl = imgPorCategoria[cat.Nombre] || imgPorCategoria.default;
             return (
               <Link
-                to={`/categoria/${encodeURIComponent(cat.Nombre)}`}
+                to={`/productos?categoria=${encodeURIComponent(cat.Nombre)}`}
                 key={i}
                 className={`categoria-card ${cat.Nombre.toLowerCase() === "camisetas" ? "camisetas-card" : ""}`}
               >
@@ -154,9 +155,6 @@ const Categorias = () => {
                 <div className="categoria-name-container">
                   <div className="categoria-name-content">
                     <h3 className="categoria-name">{cat.Nombre}</h3>
-                    {cat.Descripcion && (
-                      <p className="categoria-description">{cat.Descripcion}</p>
-                    )}
                   </div>
                 </div>
               </Link>
@@ -170,7 +168,7 @@ const Categorias = () => {
             gridColumn: '1 / -1',
             padding: '40px'
           }}>
-            No se encontraron categorías que coincidan con "{searchQuery}".
+            No se encontraron categorías que coincidan con {searchQuery}.
           </div>
         )}
       </div>
@@ -182,15 +180,15 @@ const Categorias = () => {
         .categorias-grid {
           max-width: 1200px;
           margin: 60px auto;
-          padding: 0 10px; /* Reducimos el padding horizontal para que las tarjetas se acerquen más a los bordes */
+          padding: 0 10px;
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 20px; /* Reducimos el gap para que las tarjetas estén más juntas en desktop */
+          gap: 20px;
         }
 
         .categoria-card {
           position: relative;
-          height: 300px; /* Reducimos ligeramente la altura para que se vean más compactas */
+          height: 300px;
           border-radius: 12px;
           overflow: hidden;
           text-decoration: none;
@@ -198,7 +196,6 @@ const Categorias = () => {
           transition: all 0.3s ease;
           aspect-ratio: 1/1;
           display: block;
-          /* Aseguramos que en móviles ocupe todo el ancho */
           width: 100%;
         }
 
@@ -215,21 +212,21 @@ const Categorias = () => {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transition: transform 0.5s ease;
+          transition: 0.4s;
         }
 
         .categoria-card:hover .categoria-img {
           transform: scale(1.05);
         }
 
-        /* CONTENEDOR DEL NOMBRE Y DESCRIPCIÓN */
+        /* CONTENEDOR DEL NOMBRE */
         .categoria-name-container {
           position: absolute;
           bottom: 0;
           left: 0;
           width: 100%;
           background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%);
-          padding: 15px 10px 10px; /* Reducimos el padding para que el texto no se aleje tanto del borde */
+          padding: 15px 10px 10px;
           z-index: 1;
           border-bottom-left-radius: 12px;
           border-bottom-right-radius: 12px;
@@ -242,24 +239,24 @@ const Categorias = () => {
         }
 
         .categoria-name {
-          font-size: 1.1rem;
-          font-weight: 700;
+          font-size: 1.2rem;
+          font-weight: 800;
           margin: 0 0 6px 0;
-          color: #FFFFFF;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+          color: #FFC71E;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
           line-height: 1.2;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           padding: 0 5px;
-        }
-
-        .categoria-description {
-          color: #bbb;
-          font-size: 0.85rem;
-          margin: 0;
-          line-height: 1.3;
-          opacity: 0.9;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          font-family: 'Inter', sans-serif;
+          border: 2px solid #FFC71E;
+          border-radius: 6px;
+          padding: 4px 10px;
+          background: rgba(0, 0, 0, 0.7);
+          display: inline-block;
         }
 
         .categoria-card:hover .categoria-name-container {
@@ -272,7 +269,7 @@ const Categorias = () => {
         @media (max-width: 1200px) {
           .categorias-grid {
             max-width: 1000px;
-            gap: 15px; /* Aún más cerca en pantallas medianas */
+            gap: 15px;
           }
         }
 
@@ -284,6 +281,9 @@ const Categorias = () => {
           }
           .categoria-card {
             height: 280px;
+          }
+          .categoria-name {
+            font-size: 1.1rem;
           }
         }
 
@@ -299,23 +299,14 @@ const Categorias = () => {
           .categoria-name {
             font-size: 1rem;
           }
-          .categoria-description {
-            font-size: 0.8rem;
-          }
         }
 
         @media (max-width: 576px) {
-          .categorias-grid {
-            padding: 0 10px; /* Ajuste fino en móvil */
-          }
           .categoria-card {
-            height: 220px; /* Altura más compacta en móvil */
+            height: 220px;
           }
           .categoria-name {
             font-size: 0.95rem;
-          }
-          .categoria-description {
-            font-size: 0.75rem;
           }
         }
 

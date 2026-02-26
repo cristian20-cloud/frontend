@@ -778,7 +778,7 @@ const SearchResults = ({ addToCart }) => {
         <LoadingIcon>🔍</LoadingIcon>
         <EmptyTitle>Buscando productos...</EmptyTitle>
         <EmptyText>
-          Estamos buscando "{searchTerm}" en nuestro catálogo
+          Estamos buscando &quot;{searchTerm}&quot; en nuestro catálogo
         </EmptyText>
         <LoadingSpinner />
       </LoadingContainer>
@@ -797,7 +797,7 @@ const SearchResults = ({ addToCart }) => {
             <Subtitle>
               {searchTerm ? (
                 <>
-                  Mostrando resultados para: <SearchTermHighlight>"{searchTerm}"</SearchTermHighlight>
+                  Mostrando resultados para: <SearchTermHighlight>&quot;{searchTerm}&quot;</SearchTermHighlight>
                 </>
               ) : (
                 'Ingresa un término de búsqueda para encontrar productos'
@@ -904,7 +904,7 @@ const SearchResults = ({ addToCart }) => {
           <EmptyIcon>🔍</EmptyIcon>
           <EmptyTitle>No se encontraron resultados</EmptyTitle>
           <EmptyText>
-            No encontramos productos relacionados con "{searchTerm}". 
+            No encontramos productos relacionados con &quot;{searchTerm}&quot;. 
             Prueba con términos más generales o explora nuestras categorías.
           </EmptyText>
 

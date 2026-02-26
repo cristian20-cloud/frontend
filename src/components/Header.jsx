@@ -1,13 +1,11 @@
 // src/components/Header.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
 import {
   FaShoppingCart, FaUser, FaSearch, FaTimes, FaTrash,
   FaHome, FaTags, FaFire, FaSignInAlt, FaPlus, FaMinus, FaBars,
   FaTrashAlt
 } from "react-icons/fa";
-
 import UserMenu from "./UserMenu";
 
 const Header = ({
@@ -18,19 +16,37 @@ const Header = ({
   cartItems = [],
   updateCart
 }) => {
-
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
-
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [localCartCount, setLocalCartCount] = useState(cartItemCount || 0);
   const userMenuRef = useRef(null);
   const userButtonRef = useRef(null);
-
   const navigate = useNavigate();
   const cartRef = useRef(null);
   const cartScrollRef = useRef(null);
+
+  /* ✅ ACTUALIZAR CONTADOR CUANDO CAMBIE cartItemCount */
+  useEffect(() => {
+    setLocalCartCount(cartItemCount || 0);
+  }, [cartItemCount]);
+
+  /* ✅ ESCUCHAR EVENTO DE ACTUALIZACIÓN DEL CARRITO */
+  useEffect(() => {
+    const handleCartUpdate = (event) => {
+      const cart = event.detail?.cart || JSON.parse(localStorage.getItem('cart') || '[]');
+      const total = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
+      setLocalCartCount(total);
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, []);
 
   /* CERRAR MENÚ USUARIO */
   useEffect(() => {
@@ -44,7 +60,6 @@ const Header = ({
         setIsUserMenuOpen(false);
       }
     };
-
     document.addEventListener("mousedown", closeMenu);
     return () => document.removeEventListener("mousedown", closeMenu);
   }, [isUserMenuOpen]);
@@ -57,7 +72,6 @@ const Header = ({
         setShowClearCartConfirm(false);
       }
     };
-
     if (isCartOpen) document.addEventListener("mousedown", closeCart);
     return () => document.removeEventListener("mousedown", closeCart);
   }, [isCartOpen]);
@@ -68,7 +82,6 @@ const Header = ({
       const closeMobileMenu = () => setIsMenuOpen(false);
       const links = document.querySelectorAll('.mobile-menu-link');
       links.forEach(link => link.addEventListener('click', closeMobileMenu));
-      
       return () => {
         links.forEach(link => link.removeEventListener('click', closeMobileMenu));
       };
@@ -82,32 +95,35 @@ const Header = ({
     } else {
       document.body.style.overflow = 'auto';
     }
-    
     return () => {
       document.body.style.overflow = 'auto';
     };
   }, [isMenuOpen, isCartOpen]);
 
-  /* CARRITO */
+  /* CARRITO - FUNCIONES CORREGIDAS */
   const removeFromCart = (id) => {
     const updated = cartItems.filter(i => i.id !== id);
     updateCart(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
+    const total = updated.reduce((acc, item) => acc + (item.quantity || 0), 0);
+    setLocalCartCount(total);
   };
 
   const increaseQuantity = (id) => {
     const updated = cartItems.map(i =>
-      i.id === id ? { ...i, quantity: i.quantity + 1 } : i
+      i.id === id ? { ...i, quantity: (i.quantity || 1) + 1 } : i
     );
     updateCart(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
+    const total = updated.reduce((acc, item) => acc + (item.quantity || 0), 0);
+    setLocalCartCount(total);
   };
 
   const decreaseQuantity = (id) => {
     const updated = cartItems
       .map(i => {
         if (i.id === id) {
-          const qty = i.quantity - 1;
+          const qty = (i.quantity || 1) - 1;
           if (qty <= 0) return null;
           return { ...i, quantity: qty };
         }
@@ -116,12 +132,15 @@ const Header = ({
       .filter(i => i);
     updateCart(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
+    const total = updated.reduce((acc, item) => acc + (item.quantity || 0), 0);
+    setLocalCartCount(total);
   };
 
   const clearCart = () => {
     updateCart([]);
     localStorage.setItem("cart", JSON.stringify([]));
     setShowClearCartConfirm(false);
+    setLocalCartCount(0);
   };
 
   const handleClearCartClick = () => {
@@ -133,8 +152,30 @@ const Header = ({
     setShowClearCartConfirm(false);
   };
 
+  // Función para obtener precio de forma segura
+  const getItemPrice = (item) => {
+    return Number(item.precio ?? item.price ?? item.originalPrice ?? 0);
+  };
+
+  // Función para obtener imagen de forma segura
+  const getItemImage = (item) => {
+    if (item.imagen && item.imagen.trim() !== '') return item.imagen;
+    if (item.imagenes && item.imagenes.length > 0) return item.imagenes[0];
+    if (item.image && item.image.trim() !== '') return item.image;
+    return 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM';
+  };
+
+  // Función para obtener nombre de forma segura
+  const getItemName = (item) => {
+    return item.nombre?.trim() || item.name?.trim() || 'Producto sin nombre';
+  };
+
   const calculateCartTotal = () => {
-    return cartItems.reduce((s, i) => s + i.precio * i.quantity, 0);
+    return cartItems.reduce((sum, item) => {
+      const price = getItemPrice(item);
+      const quantity = item.quantity || 1;
+      return sum + (price * quantity);
+    }, 0);
   };
 
   /* BUSQUEDA CORREGIDA */
@@ -142,32 +183,36 @@ const Header = ({
     e.preventDefault();
     if (searchTerm.trim()) {
       setIsMenuOpen(false);
-      // CORRECCIÓN: Usar 'q' como parámetro que SearchResults espera
       navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
     }
   };
 
+  const handleImageError = (e) => {
+    e.target.src = 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM';
+  };
+
   return (
     <>
-      <style>{responsiveStyles}</style>
-      
-      {/* OVERLAY PARA MENÚ MÓVIL */}
-      {isMenuOpen && (
-        <div 
-          className="mobile-menu-overlay"
-          onClick={() => setIsMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            zIndex: 998,
-          }}
-        />
-      )}
-      
+      {/* ✅ CORREGIDO: responsiveStyles dentro de <style> */}
+      <style>{responsiveStyles}
+        {/* OVERLAY PARA MENÚ MÓVIL */}
+        {isMenuOpen && (
+          <div
+            className="mobile-menu-overlay"
+            onClick={() => setIsMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.85)',
+              zIndex: 998,
+            }}
+          />
+        )}
+      </style>
+
       <header style={headerContainer}>
         <div style={headerInner}>
           {/* BOTÓN MÓVIL */}
@@ -188,15 +233,15 @@ const Header = ({
           {/* NAV DESKTOP */}
           <nav className="header-nav" style={headerNav}>
             <Link to="/" style={navLink}>
-              <FaHome size={14} /><span>Inicio</span>
+              <FaHome size={14} /> <span>Inicio</span>
             </Link>
 
             <Link to="/categorias" style={navLink}>
-              <FaTags size={14} /><span>Categorías</span>
+              <FaTags size={14} /> <span>Categorías</span>
             </Link>
 
             <Link to="/ofertas" style={navLink}>
-              <FaFire size={14} /><span>Ofertas</span>
+              <FaFire size={14} /> <span>Ofertas</span>
             </Link>
 
             {/* BUSCADOR DESKTOP - CORREGIDO */}
@@ -218,11 +263,11 @@ const Header = ({
               <button 
                 onClick={() => setIsCartOpen(!isCartOpen)} 
                 style={iconButton}
-                aria-label={`Carrito (${cartItemCount} items)`}
+                aria-label={`Carrito (${localCartCount} items)`}
               >
                 <FaShoppingCart />
-                {cartItemCount > 0 && (
-                  <span style={badgeCount}>{cartItemCount}</span>
+                {localCartCount > 0 && (
+                  <span style={badgeCount}>{localCartCount}</span>
                 )}
               </button>
 
@@ -230,7 +275,7 @@ const Header = ({
                 <div className="cart-panel-responsive" style={cartPanel}>
                   <div style={cartHeader}>
                     <div style={cartHeaderLeft}>
-                      <h4 style={cartTitle}>Carrito ({cartItemCount})</h4>
+                      <h4 style={cartTitle}>Carrito ({localCartCount})</h4>
                       {cartItems.length > 0 && (
                         <button 
                           onClick={handleClearCartClick}
@@ -281,13 +326,18 @@ const Header = ({
                         <p style={emptyCartText}>Tu carrito está vacío</p>
                       </div>
                     ) : (
-                      cartItems.map(item => (
-                        <div key={item.id} style={cartItem}>
-                          <img src={item.imagenes?.[0]} style={cartItemImage} alt={item.nombre} />
+                      cartItems.map((item, index) => (
+                        <div key={item.id || index} style={cartItem}>
+                          <img 
+                            src={getItemImage(item)} 
+                            style={cartItemImage} 
+                            alt={getItemName(item)}
+                            onError={handleImageError}
+                          />
 
                           <div style={cartItemInfo}>
-                            <p style={cartItemName}>{item.nombre}</p>
-                            
+                            <p style={cartItemName}>{getItemName(item)}</p>
+                          
                             <div style={cartItemControls}>
                               <div style={quantityControls}>
                                 <button 
@@ -297,7 +347,7 @@ const Header = ({
                                 >
                                   <FaMinus size={10} />
                                 </button>
-                                <span style={quantityText}>{item.quantity}</span>
+                                <span style={quantityText}>{item.quantity || 1}</span>
                                 <button 
                                   onClick={() => increaseQuantity(item.id)} 
                                   style={qtyBtn}
@@ -306,10 +356,10 @@ const Header = ({
                                   <FaPlus size={10} />
                                 </button>
                               </div>
-                              
+                          
                               <div style={priceRow}>
                                 <span style={itemPrice}>
-                                  ${(item.precio * item.quantity).toLocaleString()}
+                                  ${(getItemPrice(item) * (item.quantity || 1)).toLocaleString()}
                                 </span>
                                 <button 
                                   onClick={() => removeFromCart(item.id)} 
@@ -329,10 +379,10 @@ const Header = ({
                   {cartItems.length > 0 && (
                     <div style={cartFooter}>
                       <div style={totalRow}>
-                        <span style={totalLabel}>Total:</span>
+                        <span style={totalLabel}>Total: </span>
                         <span style={totalAmount}>${calculateCartTotal().toLocaleString()}</span>
                       </div>
-                      
+                  
                       <Link 
                         to="/cart" 
                         onClick={() => {
@@ -369,7 +419,7 @@ const Header = ({
               </div>
             ) : (
               <button onClick={onLoginClick} style={loginButton}>
-                <FaSignInAlt size={14} /><span style={{ marginLeft: 6 }}>Iniciar sesión</span>
+                <FaSignInAlt size={14} /> <span style={{ marginLeft: 6 }}>Iniciar sesión</span>
               </button>
             )}
           </nav>
@@ -400,7 +450,7 @@ const Header = ({
                 </>
               )}
             </div>
-            
+          
             <button 
               onClick={() => setIsMenuOpen(false)}
               style={mobileCloseBtn}
@@ -437,7 +487,7 @@ const Header = ({
               <FaHome size={16} style={mobileNavIcon} /> 
               <span>Inicio</span>
             </Link>
-            
+          
             <Link 
               to="/categorias" 
               className="mobile-menu-link" 
@@ -447,7 +497,7 @@ const Header = ({
               <FaTags size={16} style={mobileNavIcon} /> 
               <span>Categorías</span>
             </Link>
-            
+          
             <Link 
               to="/ofertas" 
               className="mobile-menu-link" 
@@ -457,7 +507,7 @@ const Header = ({
               <FaFire size={16} style={mobileNavIcon} /> 
               <span>Ofertas</span>
             </Link>
-            
+          
             <Link 
               to="/cart" 
               className="mobile-menu-link" 
@@ -466,8 +516,8 @@ const Header = ({
             >
               <FaShoppingCart size={16} style={mobileNavIcon} /> 
               <span>Carrito</span>
-              {cartItemCount > 0 && (
-                <span style={mobileBadge}>{cartItemCount}</span>
+              {localCartCount > 0 && (
+                <span style={mobileBadge}>{localCartCount}</span>
               )}
             </Link>
           </nav>
@@ -516,7 +566,6 @@ const Header = ({
 };
 
 /* -------------------- ESTILOS -------------------- */
-
 const headerContainer = {
   position: "fixed",
   top: 0,
@@ -1106,231 +1155,6 @@ const logoutMobileBtn = {
 };
 
 /* ESTILOS RESPONSIVE */
-const responsiveStyles = `
-  /* Responsive para móviles (0-768px) */
-  @media (max-width: 768px) {
-    .header-nav {
-      display: none !important;
-    }
-    
-    .header-menu-btn {
-      display: block !important;
-    }
-    
-    /* Carrito en móvil - más compacto */
-    .cart-panel-responsive {
-      position: fixed !important;
-      top: 60px !important;
-      right: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      max-width: 100vw !important;
-      height: calc(100vh - 60px) !important;
-      max-height: calc(100vh - 60px) !important;
-      margin-top: 0 !important;
-      border-radius: 0 !important;
-      border: none !important;
-      border-top: 2px solid #FFC107 !important;
-      padding: 15px !important;
-    }
-    
-    /* Menú de usuario en móvil */
-    .user-menu-responsive {
-      position: fixed !important;
-      top: 60px !important;
-      right: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      max-width: 100vw !important;
-      margin-top: 0 !important;
-      border-radius: 0 !important;
-      border: none !important;
-      border-top: 2px solid #FFC107 !important;
-    }
-    
-    /* Buscador en móvil */
-    .header-search {
-      display: none !important;
-    }
-    
-    /* Menú móvil abierto */
-    .header-mobile-menu.open {
-      left: 0 !important;
-    }
-    
-    /* Overlay para menú móvil */
-    .mobile-menu-overlay {
-      display: block !important;
-    }
-    
-    /* Botón de vaciar carrito en móvil */
-    .clearCartBtn {
-      padding: 6px 8px !important;
-    }
-    
-    /* Confirmación en móvil */
-    .clearCartConfirm {
-      margin: 10px 0 !important;
-      padding: 12px !important;
-    }
-    
-    .confirmText {
-      font-size: 14px !important;
-      margin-bottom: 12px !important;
-    }
-    
-    .confirmButtons {
-      gap: 10px !important;
-    }
-    
-    .confirmYesBtn, .confirmNoBtn {
-      padding: 8px 14px !important;
-      font-size: 13px !important;
-    }
-  }
-  
-  /* Menú móvil en pantallas muy pequeñas */
-  @media (max-width: 480px) {
-    .header-mobile-menu {
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-    
-    .cart-panel-responsive {
-      padding: 12px !important;
-    }
-    
-    .cartItem {
-      padding: 8px 0 !important;
-    }
-    
-    .cartItemImage {
-      width: 45px !important;
-      height: 45px !important;
-    }
-    
-    .searchMobileInput {
-      font-size: 14px !important;
-    }
-  }
-  
-  /* Responsive para tabletas (769px - 1024px) */
-  @media (min-width: 769px) and (max-width: 1024px) {
-    .header-search input {
-      width: 160px !important;
-    }
-    
-    .header-nav {
-      gap: 16px !important;
-    }
-    
-    .navLink {
-      padding: 6px 8px !important;
-      font-size: 13px !important;
-    }
-    
-    .cart-panel-responsive {
-      width: 280px !important;
-    }
-  }
-  
-  /* Ocultar menú móvil en desktop */
-  @media (min-width: 769px) {
-    .header-mobile-menu {
-      display: none !important;
-    }
-    
-    .header-menu-btn {
-      display: none !important;
-    }
-    
-    .mobile-menu-overlay {
-      display: none !important;
-    }
-  }
-  
-  /* Animaciones */
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .cart-panel-responsive {
-    animation: slideDown 0.2s ease-out;
-  }
-  
-  .user-menu-responsive {
-    animation: slideDown 0.2s ease-out;
-  }
-  
-  /* SCROLL INVISIBLE para el carrito */
-  .cart-scroll-invisible {
-    overflow-y: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-  
-  .cart-scroll-invisible::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-    width: 0;
-    height: 0;
-    background: transparent;
-  }
-  
-  .cart-scroll-invisible::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .cart-scroll-invisible::-webkit-scrollbar-thumb {
-    background: transparent;
-    border: none;
-  }
-  
-  .cart-scroll-invisible::-webkit-scrollbar-thumb:hover {
-    background: transparent;
-  }
-  
-  /* Scroll invisible para menú móvil también */
-  .header-mobile-menu {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .header-mobile-menu::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-    background: transparent;
-  }
-  
-  .header-mobile-menu::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .header-mobile-menu::-webkit-scrollbar-thumb {
-    background: transparent;
-    border: none;
-  }
-  
-  /* Efectos hover para botones de confirmación */
-  .confirmYesBtn:hover {
-    background: #ff5252 !important;
-  }
-  
-  .confirmNoBtn:hover {
-    background: rgba(255, 255, 255, 0.2) !important;
-  }
-  
-  .clearCartBtn:hover {
-    background: rgba(255, 107, 107, 0.2) !important;
-    transform: scale(1.05);
-  }
-`;
+const responsiveStyles = `/* Responsive para móviles (0-768px) */ @media (max-width: 768px) { .header-nav { display: none !important; } .header-menu-btn { display: block !important; } /* Carrito en móvil - más compacto */ .cart-panel-responsive { position: fixed !important; top: 60px !important; right: 0 !important; left: 0 !important; width: 100vw !important; max-width: 100vw !important; height: calc(100vh - 60px) !important; max-height: calc(100vh - 60px) !important; margin-top: 0 !important; border-radius: 0 !important; border: none !important; border-top: 2px solid #FFC107 !important; padding: 15px !important; } /* Menú de usuario en móvil */ .user-menu-responsive { position: fixed !important; top: 60px !important; right: 0 !important; left: 0 !important; width: 100vw !important; max-width: 100vw !important; margin-top: 0 !important; border-radius: 0 !important; border: none !important; border-top: 2px solid #FFC107 !important; } /* Buscador en móvil */ .header-search { display: none !important; } /* Menú móvil abierto */ .header-mobile-menu.open { left: 0 !important; } /* Overlay para menú móvil */ .mobile-menu-overlay { display: block !important; } /* Botón de vaciar carrito en móvil */ .clearCartBtn { padding: 6px 8px !important; } /* Confirmación en móvil */ .clearCartConfirm { margin: 10px 0 !important; padding: 12px !important; } .confirmText { font-size: 14px !important; margin-bottom: 12px !important; } .confirmButtons { gap: 10px !important; } .confirmYesBtn, .confirmNoBtn { padding: 8px 14px !important; font-size: 13px !important; } } /* Menú móvil en pantallas muy pequeñas */ @media (max-width: 480px) { .header-mobile-menu { width: 100% !important; max-width: 100% !important; } .cart-panel-responsive { padding: 12px !important; } .cartItem { padding: 8px 0 !important; } .cartItemImage { width: 45px !important; height: 45px !important; } .searchMobileInput { font-size: 14px !important; } } /* Responsive para tabletas (769px - 1024px) */ @media (min-width: 769px) and (max-width: 1024px) { .header-search input { width: 160px !important; } .header-nav { gap: 16px !important; } .navLink { padding: 6px 8px !important; font-size: 13px !important; } .cart-panel-responsive { width: 280px !important; } } /* Ocultar menú móvil en desktop */ @media (min-width: 769px) { .header-mobile-menu { display: none !important; } .header-menu-btn { display: none !important; } .mobile-menu-overlay { display: none !important; } } /* Animaciones */ @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } } .cart-panel-responsive { animation: slideDown 0.2s ease-out; } .user-menu-responsive { animation: slideDown 0.2s ease-out; } /* SCROLL INVISIBLE para el carrito */ .cart-scroll-invisible { overflow-y: auto; scrollbar-width: none; /* Firefox */ -ms-overflow-style: none; /* IE and Edge */ } .cart-scroll-invisible::-webkit-scrollbar { display: none; /* Chrome, Safari, Opera */ width: 0; height: 0; background: transparent; } .cart-scroll-invisible::-webkit-scrollbar-track { background: transparent; } .cart-scroll-invisible::-webkit-scrollbar-thumb { background: transparent; border: none; } .cart-scroll-invisible::-webkit-scrollbar-thumb:hover { background: transparent; } /* Scroll invisible para menú móvil también */ .header-mobile-menu { scrollbar-width: none; -ms-overflow-style: none; } .header-mobile-menu::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; } .header-mobile-menu::-webkit-scrollbar-track { background: transparent; } .header-mobile-menu::-webkit-scrollbar-thumb { background: transparent; border: none; } /* Efectos hover para botones de confirmación */ .confirmYesBtn:hover { background: #ff5252 !important; } .confirmNoBtn:hover { background: rgba(255, 255, 255, 0.2) !important; } .clearCartBtn:hover { background: rgba(255, 107, 107, 0.2) !important; transform: scale(1.05); }`;
 
 export default Header;

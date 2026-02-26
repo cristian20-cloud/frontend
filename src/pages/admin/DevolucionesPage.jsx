@@ -12,8 +12,8 @@ const DevolucionesPage = () => {
   const [devoluciones, setDevoluciones] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(7);
+  // ELIMINADO: const [currentPage, setCurrentPage] = useState(1);
+  // ELIMINADO: const [itemsPerPage] = useState(7);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'view', devolucion: null });
   const [formData, setFormData] = useState({});
@@ -145,7 +145,7 @@ const DevolucionesPage = () => {
   };
 
   // =============== RENDER FIELD ===============
-  const renderField = (label, fieldName, type = 'text', options = []) => {
+  const renderField = (label, fieldName, type = 'text') => { // ELIMINADO: options = []
     const devolucion = modalState.devolucion;
     const isError = errors[fieldName];
     const borderColor = isError ? '#ef4444' : '#334155';
@@ -364,14 +364,13 @@ const DevolucionesPage = () => {
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 3000);
   };
 
-  const clearSearch = () => { 
-    setSearchTerm(''); 
-    setCurrentPage(1); 
-  };
+  // ELIMINADO: const clearSearch = () => { 
+  //   setSearchTerm(''); 
+  //   setCurrentPage(1); 
+  // };
 
   const handleFilterSelect = (status) => { 
     setFilterStatus(status); 
-    setCurrentPage(1); 
   };
 
   // =============== MANEJO DE MODAL ===============
@@ -654,7 +653,7 @@ const DevolucionesPage = () => {
       )}
       
       <div style={{ display: "flex", flexDirection: "column", padding: "4px 12px 0 12px", flex: 1, height: "100%" }}>
-        {/* Encabezado - IDENTICO A COMPRAS */}
+        {/* Encabezado */}
         <div style={{ marginBottom: "8px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
             <div>
@@ -698,7 +697,7 @@ const DevolucionesPage = () => {
             </div>
           </div>
           
-          {/* Buscador y Filtro - IDENTICO A COMPRAS */}
+          {/* Buscador y Filtro */}
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
               <SearchInput
@@ -713,7 +712,7 @@ const DevolucionesPage = () => {
           </div>
         </div>
 
-        {/* Contenido Principal - IDENTICO A COMPRAS */}
+        {/* Contenido Principal */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -772,7 +771,7 @@ const DevolucionesPage = () => {
             />
           </div>
 
-          {/* Paginación - SIMILAR A COMPRAS PERO SIN PÁGINAS */}
+          {/* Paginación */}
           <div style={{
             display: "flex",
             justifyContent: "space-between",
@@ -804,7 +803,7 @@ const DevolucionesPage = () => {
         </div>
       </div>
 
-      {/* MODAL DE CREACIÓN/EDICIÓN - MANTENIENDO TU ESTILO */}
+      {/* MODAL DE CREACIÓN/EDICIÓN */}
       <UniversalModal
         isOpen={modalState.isOpen && (modalState.mode === 'create' || modalState.mode === 'edit')}
         onClose={closeModal}

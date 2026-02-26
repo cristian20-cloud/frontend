@@ -1,4 +1,4 @@
-// src/pages/admin/CategoriasPage.jsx
+// src/pages/admin/Categorias.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import Alert from '../../components/Alert';
 import SearchInput from '../../components/SearchInput';
@@ -18,7 +18,7 @@ const CategoriasPage = () => {
   const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, category: null });
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
-  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+  // ELIMINADO: const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
   const ITEMS_PER_PAGE = 3;
@@ -113,7 +113,7 @@ const CategoriasPage = () => {
   const openModal = (mode = 'create', category = null) => {
     setModalState({ isOpen: true, mode, category });
     setErrors({});
-    setSelectedImageIndex(null);
+    // ELIMINADO: setSelectedImageIndex(null);
     setSelectedFile(null);
     if (category && (mode === 'edit' || mode === 'view')) {
       setFormData({
@@ -136,7 +136,7 @@ const CategoriasPage = () => {
     setModalState({ isOpen: false, mode: 'view', category: null });
     setFormData({});
     setErrors({});
-    setSelectedImageIndex(null);
+    // ELIMINADO: setSelectedImageIndex(null);
     setSelectedFile(null);
   };
 
@@ -217,7 +217,7 @@ const CategoriasPage = () => {
       const actualFieldName = fieldMap[fieldName] || fieldName;
       let displayValue = category?.[actualFieldName] || 'N/A';
 
-      if (fieldName === 'imagenUrl' || fieldName === 'Importar Imagen (opcional)') {
+      if (fieldName === 'imagenUrl' || fieldName === 'Importar Imagen') {
         const imageUrl = category?.imagenUrl || imgPorCategoria.default;
         return (
           <div>
@@ -876,7 +876,7 @@ const CategoriasPage = () => {
               marginBottom: '2px',
               display: 'block'
             }}>
-              Importar Imagen (opcional):
+              Importar Imagen :
             </label>
             <div style={{
               backgroundColor: '#1e293b',

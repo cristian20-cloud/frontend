@@ -23,7 +23,7 @@ const formatPrice = (value) => {
 // =============================================
 // COMPONENTE StatusPill
 // =============================================
-const StatusPill = React.memo(({ status }) => {
+const StatusPill = React.memo(function StatusPill({ status }) {
   const getColorForStatus = (status) => {
     switch(status?.toLowerCase()) {
       case 'activo':
@@ -57,7 +57,7 @@ const StatusPill = React.memo(({ status }) => {
 // =============================================
 // COMPONENTE StatusFilter
 // =============================================
-const StatusFilter = ({ filterStatus, onFilterSelect }) => {
+const StatusFilter = React.memo(function StatusFilter({ filterStatus, onFilterSelect }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
@@ -93,17 +93,17 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
       )}
     </div>
   );
-};
+});
 
 // =============================================
 // COMPONENTE ProductoForm
 // =============================================
-const ProductoForm = React.memo(({ producto, onChange, onRemove, index, isViewMode = false, error = false, isFirst = false }) => {
+const ProductoForm = React.memo(function ProductoForm({ producto, onChange, onRemove, index, isViewMode = false, isFirst = false }) {
   const subtotal = (producto.cantidad || 0) * (parseFloat(producto.precio) || 0);
   // Estilo base para inputs en modo edición/creación: SIN BORDE
   const productInputStyle = {
     backgroundColor: '#0a0a0a',
-    border: 'none', // Quitar borde completamente
+    border: 'none',
     borderRadius: '4px',
     color: '#ffffff',
     fontSize: '12px',
@@ -120,7 +120,7 @@ const ProductoForm = React.memo(({ producto, onChange, onRemove, index, isViewMo
     gridTemplateColumns: !isFirst ? '2.5fr 1fr 1fr 0.8fr 1fr 1.2fr auto' : '2.5fr 1fr 1fr 0.8fr 1fr 1.2fr',
     alignItems: 'center',
     padding: '4px 0',
-    border: 'none' // Quitar borde del contenedor
+    border: 'none'
   };
 
   const gridTemplate = '2.5fr 1fr 1fr 0.8fr 1fr 1.2fr';
@@ -163,20 +163,24 @@ const ProductoForm = React.memo(({ producto, onChange, onRemove, index, isViewMo
   );
 });
 
-const FormField = React.memo(({ label, required, children, error }) => (
-  <div>
-    <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
-    {children}
-    {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
-  </div>
-));
+const FormField = React.memo(function FormField({ label, required, children, error }) {
+  return (
+    <div>
+      <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
+      {children}
+      {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
+    </div>
+  );
+});
 
-const DetailField = React.memo(({ label, value }) => (
-  <div>
-    <label style={{ fontSize: "12px", color: "#e2e8f0", display: "block" }}>{label}:</label>
-    <div style={{ backgroundColor: "#0a0a0a", border: "1px solid #334155", borderRadius: "6px", padding: "4px 8px", color: "#f1f5f9", fontSize: "13px" }}>{value || 'N/A'}</div>
-  </div>
-));
+const DetailField = React.memo(function DetailField({ label, value }) {
+  return (
+    <div>
+      <label style={{ fontSize: "12px", color: "#e2e8f0", display: "block" }}>{label}:</label>
+      <div style={{ backgroundColor: "#0a0a0a", border: "1px solid #334155", borderRadius: "6px", padding: "4px 8px", color: "#f1f5f9", fontSize: "13px" }}>{value || 'N/A'}</div>
+    </div>
+  );
+});
 
 // =============================================
 // PÁGINA PRINCIPAL ComprasPage
@@ -208,12 +212,7 @@ const ComprasPage = () => {
     { header: 'Estado', field: 'estado', render: (item) => <StatusPill status={item.estado} /> }
   ];
 
-  useEffect(() => {
-    if (location.state?.openModal) {
-      openModal('create');
-    }
-  }, [location]);
-
+  // ===== CARGAR DATOS INICIALES =====
   useEffect(() => {
     setCompras(initialOrders.map(o => ({
       id: `#${o.IdCompra}`, proveedor: o.proveedor, fecha: o.Fecha ? new Date(o.Fecha).toLocaleDateString('es-CO') : 'N/A', 
@@ -227,6 +226,7 @@ const ComprasPage = () => {
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 3000);
   }, []);
 
+  // ===== FUNCIONES DEL MODAL (DECLARADAS ANTES DE USARSE) =====
   const openModal = useCallback((mode = 'create', compra = null) => {
     if (compra && compra.estado === 'Anulada' && mode !== 'view') {
       showAlert('Las compras anuladas solo pueden ser vistas.', 'error');
@@ -244,13 +244,23 @@ const ComprasPage = () => {
 
   const closeModal = useCallback(() => setModalState({ isOpen: false, mode: 'view', compra: null }), []);
 
+  // ===== EFECTO PARA ABRIR MODAL DESDE LOCATION =====
+  useEffect(() => {
+    if (location.state?.openModal) {
+      openModal('create');
+    }
+  }, [location, openModal]);
+
   const agregarProducto = () => setNuevaCompra(p => ({ ...p, productos: [...p.productos, { id: '', nombre: '', color: '', talla: '', cantidad: 1, precio: '', _tempKey: Math.random() }] }));
+  
   const actualizarProducto = (index, campo, valor) => setNuevaCompra(p => {
     const n = [...p.productos];
     n[index] = { ...n[index], [campo]: valor };
     return { ...p, productos: n };
   });
+  
   const eliminarProducto = (index) => nuevaCompra.productos.length > 1 && setNuevaCompra(p => ({ ...p, productos: p.productos.filter((_, i) => i !== index) }));
+  
   const calcularTotal = () => nuevaCompra.productos.reduce((t, p) => t + (p.cantidad * (parseFloat(p.precio) || 0)), 0);
 
   const validar = () => {
@@ -291,7 +301,7 @@ const ComprasPage = () => {
     return search && status;
   });
 
-  // Función para renderizar el contenido del modal según el modo
+  // ===== FUNCIÓN PARA RENDERIZAR EL CONTENIDO DEL MODAL =====
   const renderModalContent = () => {
     const isView = modalState.mode === 'view';
     const isEdit = modalState.mode === 'edit';
@@ -375,7 +385,7 @@ const ComprasPage = () => {
               width: '100%', 
               background: '#0a0a0a', 
               color: '#fff', 
-              border: errors.proveedor ? '1px solid #ef4444' : 'none', // Sin borde
+              border: errors.proveedor ? '1px solid #ef4444' : 'none',
               height: '32px', 
               borderRadius: '4px',
               padding: '0 8px',
@@ -398,7 +408,7 @@ const ComprasPage = () => {
                     width: '100%', 
                     background: '#0a0a0a', 
                     color: '#fff', 
-                    border: 'none', // Sin borde
+                    border: 'none',
                     height: '32px', 
                     borderRadius: '4px',
                     padding: '0 8px',
@@ -420,7 +430,7 @@ const ComprasPage = () => {
                   width: '100%', 
                   background: '#0a0a0a', 
                   color: '#fff', 
-                  border: 'none', // Sin borde
+                  border: 'none',
                   height: '32px', 
                   borderRadius: '4px',
                   padding: '0 8px',
@@ -437,7 +447,7 @@ const ComprasPage = () => {
                 value={nuevaCompra.fecha} 
                 onChange={(d) => setNuevaCompra(p => ({...p, fecha: d}))} 
                 inputStyle={{
-                  border: 'none', // Sin borde
+                  border: 'none',
                   backgroundColor: '#0a0a0a',
                   color: '#fff',
                   borderRadius: '4px',
@@ -477,7 +487,6 @@ const ComprasPage = () => {
                 onChange={actualizarProducto} 
                 onRemove={eliminarProducto} 
                 isFirst={i === 0} 
-                error={errors[`producto_precio_${i}`] || errors[`producto_cantidad_${i}`]} 
               />
             ))}
           </div>
@@ -582,7 +591,7 @@ const ComprasPage = () => {
                 onClear={() => setSearchTerm('')}
                 fullWidth={true}
                 inputStyle={{
-                  border: '1px solid #F5C81B', // Borde amarillo para el buscador
+                  border: '1px solid #F5C81B',
                   backgroundColor: '#0a0a0a',
                   color: '#fff',
                   borderRadius: '4px',
@@ -602,7 +611,7 @@ const ComprasPage = () => {
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '6px',
-          border: '1px solid #F5C81B', // Borde principal de la sección
+          border: '1px solid #F5C81B',
           overflow: 'hidden',
           backgroundColor: '#000',
         }}>
@@ -634,11 +643,11 @@ const ComprasPage = () => {
                 fontWeight: '600',
                 fontSize: '11px',
                 color: '#F5C81B',
-                borderBottom: '1px solid #F5C81B', // Línea de separación entre encabezado y cuerpo
+                borderBottom: '1px solid #F5C81B',
                 backgroundColor: '#151822',
               }}
               rowStyle={{
-                border: 'none', // Eliminar bordes entre filas
+                border: 'none',
                 backgroundColor: '#000',
                 '&:hover': {
                   backgroundColor: '#111111',
@@ -654,7 +663,7 @@ const ComprasPage = () => {
             alignItems: "center",
             padding: "8px 12px",
             backgroundColor: "#151822",
-            borderTop: '1px solid #F5C81B', // Línea superior de la paginación
+            borderTop: '1px solid #F5C81B',
             fontSize: "12px",
             color: "#e0e0e0",
             height: "48px",
@@ -713,7 +722,7 @@ const ComprasPage = () => {
         </div>
       </div>
 
-      {/* Modal ajustado - más oscuro, estrecho y con bordes amarillos delgados */}
+      {/* Modal */}
       <UniversalModal 
         isOpen={modalState.isOpen} 
         onClose={closeModal} 
@@ -736,7 +745,7 @@ const ComprasPage = () => {
           content: { 
             padding: '16px',
             backgroundColor: '#000000',
-            border: '0.3px solid #F5C81B', // Borde principal del modal ahora es aún más delgado (0.3px)
+            border: '0.3px solid #F5C81B',
             borderRadius: '6px',
             maxWidth: '500px',
             width: '85%',

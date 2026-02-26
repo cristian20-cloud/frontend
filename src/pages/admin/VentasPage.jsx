@@ -22,7 +22,7 @@ const formatPrice = (value) => {
 // =============================================
 // COMPONENTE StatusPill
 // =============================================
-const StatusPill = React.memo(({ status }) => {
+const StatusPill = React.memo(function StatusPill({ status }) {
   const getColorForStatus = (status) => {
     switch(status?.toLowerCase()) {
       case 'activo':
@@ -56,7 +56,7 @@ const StatusPill = React.memo(({ status }) => {
 // =============================================
 // COMPONENTE StatusFilter
 // =============================================
-const StatusFilter = ({ filterStatus, onFilterSelect }) => {
+const StatusFilter = React.memo(function StatusFilter({ filterStatus, onFilterSelect }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
@@ -92,12 +92,12 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
       )}
     </div>
   );
-};
+});
 
 // =============================================
 // COMPONENTE ProductoForm
 // =============================================
-const ProductoForm = React.memo(({ producto, onChange, onRemove, index, isViewMode = false, error = false, isFirst = false }) => {
+const ProductoForm = React.memo(function ProductoForm({ producto, onChange, onRemove, index, isViewMode = false, error = false, isFirst = false }) {
   const subtotal = (producto.cantidad || 0) * (parseFloat(producto.precio) || 0);
   const productInputStyle = {
     backgroundColor: '#000',
@@ -151,20 +151,24 @@ const ProductoForm = React.memo(({ producto, onChange, onRemove, index, isViewMo
   );
 });
 
-const FormField = React.memo(({ label, required, children, error }) => (
-  <div>
-    <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
-    {children}
-    {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
-  </div>
-));
+const FormField = React.memo(function FormField({ label, required, children, error }) {
+  return (
+    <div>
+      <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
+      {children}
+      {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
+    </div>
+  );
+});
 
-const DetailField = React.memo(({ label, value }) => (
-  <div>
-    <label style={{ fontSize: "12px", color: "#e2e8f0", display: "block" }}>{label}:</label>
-    <div style={{ backgroundColor: "#000", border: "1px solid #F5C81B", borderRadius: "4px", padding: "4px 8px", color: "#f1f5f9", fontSize: "13px" }}>{value || 'N/A'}</div>
-  </div>
-));
+const DetailField = React.memo(function DetailField({ label, value }) {
+  return (
+    <div>
+      <label style={{ fontSize: "12px", color: "#e2e8f0", display: "block" }}>{label}:</label>
+      <div style={{ backgroundColor: "#000", border: "1px solid #F5C81B", borderRadius: "4px", padding: "4px 8px", color: "#f1f5f9", fontSize: "13px" }}>{value || 'N/A'}</div>
+    </div>
+  );
+});
 
 // =============================================
 // PÁGINA PRINCIPAL VentasPage
@@ -520,10 +524,11 @@ const VentasPage = () => {
         flexDirection: "column", 
         padding: "4px 12px 0 12px", 
         flex: 1, 
-        height: "100vh",
-        overflow: "hidden"
+        height: "100%", // Cambiado de 100vh a 100%
+        overflow: "hidden",
+        position: "relative" // Añadido para mejor control
       }}>
-        {/* Encabezado */}
+        {/* Encabezado - fijo */}
         <div style={{ 
           marginBottom: "8px",
           flexShrink: 0 
@@ -585,7 +590,7 @@ const VentasPage = () => {
           </div>
         </div>
 
-        {/* Contenido Principal - SIN SCROLL */}
+        {/* Contenedor de la tabla con altura calculada */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -594,12 +599,13 @@ const VentasPage = () => {
           border: '1px solid #F5C81B',
           overflow: 'hidden',
           backgroundColor: '#000',
-          minHeight: 0,
+          minHeight: 0, // Importante para evitar desbordamiento
+          height: 'calc(100vh - 140px)', // Altura fija calculada
         }}>
-          {/* Tabla - Ajustada para no tener scroll interno */}
+          {/* Tabla */}
           <div style={{
             flex: 1,
-            overflow: 'hidden',
+            overflow: 'auto', // Scroll solo en la tabla
             minHeight: 0,
           }}>
             <EntityTable 
@@ -613,17 +619,11 @@ const VentasPage = () => {
               style={{
                 border: 'none',
                 borderRadius: '0',
-                height: '100%',
               }}
               tableStyle={{
                 width: '100%',
                 borderCollapse: 'collapse',
                 tableLayout: 'fixed',
-                height: '100%',
-              }}
-              containerStyle={{
-                height: '100%',
-                overflow: 'hidden',
               }}
               headerStyle={{
                 padding: '6px 4px',
@@ -633,11 +633,14 @@ const VentasPage = () => {
                 color: '#F5C81B',
                 borderBottom: '1px solid #F5C81B',
                 backgroundColor: '#151822',
+                position: 'sticky', // Header pegajoso
+                top: 0,
+                zIndex: 10,
               }}
             />
           </div>
 
-          {/* Paginación */}
+          {/* Paginación - fija */}
           <div style={{
             display: "flex",
             justifyContent: "space-between",
@@ -729,10 +732,10 @@ const VentasPage = () => {
             backgroundColor: '#000',
             border: '1px solid #F5C81B',
             borderRadius: '4px',
-            maxWidth: '520px', // Más estrecho pero no tanto
+            maxWidth: '520px',
             width: '90%',
             maxHeight: '75vh',
-            overflow: 'hidden', // Sin scroll en el contenedor principal
+            overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
             margin: 'auto',
           },

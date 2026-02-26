@@ -1,6 +1,6 @@
 // src/components/UserMenu.jsx
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // 👈 IMPORTAR useNavigate
 import { FaUser, FaQuestionCircle, FaSun, FaSignOutAlt } from 'react-icons/fa';
 
 // 🔹 COMPONENTES REUTILIZABLES
@@ -10,7 +10,6 @@ const MenuLink = ({ to, label, Icon, onClose }) => {
       onClose();
     }
   };
-
   return (
     <Link
       to={to}
@@ -61,23 +60,31 @@ const menuBaseStyle = {
 
 // 🔹 COMPONENTE PRINCIPAL
 const UserMenu = ({ onClose, onToggleTheme, onLogout }) => {
+  const navigate = useNavigate(); // 👈 USAR NAVEGATE
+
+  // ✅ CORREGIDO: Cerrar sesión y redirigir al home
   const handleLogout = () => {
-    // 1. Primero ejecutar logout si existe
-    if (onLogout && typeof onLogout === 'function') {
-      onLogout();
-    }
-    
-    // 2. Luego cerrar el menú si existe
+    // 1. Primero cerrar el menú
     if (onClose && typeof onClose === 'function') {
       onClose();
     }
+
+    // 2. Pequeño delay para asegurar que el menú se cierre visualmente
+    setTimeout(() => {
+      // 3. Ejecutar logout (esto viene de Header -> App)
+      if (onLogout && typeof onLogout === 'function') {
+        onLogout();
+      }
+      
+      // 4. Redirigir al home (por si acaso)
+      navigate('/', { replace: true });
+    }, 150);
   };
 
   const handleToggleTheme = () => {
     if (onToggleTheme && typeof onToggleTheme === 'function') {
       onToggleTheme();
     }
-    
     if (onClose && typeof onClose === 'function') {
       onClose();
     }
@@ -99,14 +106,14 @@ const UserMenu = ({ onClose, onToggleTheme, onLogout }) => {
         padding: "6px 0",
       }}
     >
-      {/* PERFIL */}
-      <MenuLink 
-        to="/profile" 
-        label="Perfil" 
-        Icon={FaUser} 
-        onClose={onClose} 
+      {/* PERFIL - RUTA CORRECTA /profile */}
+      <MenuLink
+        to="/profile"
+        label="Perfil"
+        Icon={FaUser}
+        onClose={onClose}
       />
-
+      
       {/* AYUDA */}
       <MenuLink 
         to="/help" 
@@ -114,14 +121,14 @@ const UserMenu = ({ onClose, onToggleTheme, onLogout }) => {
         Icon={FaQuestionCircle} 
         onClose={onClose} 
       />
-
+      
       {/* MODO CLARO */}
       <MenuButton
         label="Modo Claro"
         Icon={FaSun}
         onClick={handleToggleTheme}
       />
-
+      
       {/* DIVISOR */}
       <div
         style={{
@@ -130,7 +137,7 @@ const UserMenu = ({ onClose, onToggleTheme, onLogout }) => {
           margin: "6px 0",
         }}
       />
-
+      
       {/* CERRAR SESIÓN (ROJO) */}
       <MenuButton
         label="Cerrar Sesión"

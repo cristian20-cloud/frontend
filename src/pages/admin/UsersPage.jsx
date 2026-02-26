@@ -52,13 +52,15 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
   );
 };
 
-const FormField = React.memo(({ label, required, children, error }) => (
-  <div>
-    <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
-    {children}
-    {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
-  </div>
-));
+const FormField = React.memo(function FormField({ label, required, children, error }) {
+  return (
+    <div>
+      <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
+      {children}
+      {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
+    </div>
+  );
+});
 
 const UsersPage = () => {
   // ─── Estados
@@ -306,10 +308,7 @@ const UsersPage = () => {
   };
 
   // ─── Utilidades de búsqueda y filtrado
-  const clearSearch = () => { 
-    setSearchTerm(''); 
-    setCurrentPage(1); 
-  };
+  // ELIMINADO: const clearSearch = () => { ... } - no se usa
 
   const handleFilterSelect = (status) => { 
     setFilterStatus(status); 
@@ -343,7 +342,7 @@ const UsersPage = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, filteredUsers.length);
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-  const showingStart = filteredUsers.length > 0 ? startIndex + 1 : 0;
+  // ELIMINADO: const showingStart = filteredUsers.length > 0 ? startIndex + 1 : 0;
 
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages);
@@ -500,7 +499,7 @@ const UsersPage = () => {
       header: 'Estado', 
       field: 'estado',
       width: '100px',
-      headerStyle: { // ESTILO ESPECÍFICO PARA EL HEADER
+      headerStyle: {
         textAlign: 'center',
         padding: '6px 2px',
       },
@@ -606,7 +605,7 @@ const UsersPage = () => {
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '6px',
-          border: '0.5px solid #F5C81B', // BORDE MÁS DELGADO
+          border: '0.5px solid #F5C81B',
           overflow: 'hidden',
           backgroundColor: '#000',
         }}>
@@ -657,7 +656,7 @@ const UsersPage = () => {
             alignItems: "center",
             padding: "8px 12px",
             backgroundColor: "#151822",
-            borderTop: '0.5px solid #F5C81B', // BORDE MÁS DELGADO
+            borderTop: '0.5px solid #F5C81B',
             fontSize: "12px",
             color: "#e0e0e0",
             height: "48px",
@@ -672,7 +671,7 @@ const UsersPage = () => {
                 disabled={currentPage === 1}
                 style={{
                   background: 'transparent',
-                  border: '0.5px solid #F5C81B', // BORDE MÁS DELGADO
+                  border: '0.5px solid #F5C81B',
                   color: currentPage === 1 ? '#6B7280' : '#F5C81B',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -699,7 +698,7 @@ const UsersPage = () => {
                 disabled={currentPage >= Math.ceil(filteredUsers.length / itemsPerPage)}
                 style={{
                   background: 'transparent',
-                  border: '0.5px solid #F5C81B', // BORDE MÁS DELGADO
+                  border: '0.5px solid #F5C81B',
                   color: currentPage >= Math.ceil(filteredUsers.length / itemsPerPage) ? '#6B7280' : '#F5C81B',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -727,7 +726,7 @@ const UsersPage = () => {
           content: { 
             padding: '16px',
             backgroundColor: '#000',
-            border: '0.5px solid #F5C81B', // BORDE MÁS DELGADO
+            border: '0.5px solid #F5C81B',
             borderRadius: '6px',
             maxWidth: '400px',
             width: '90%',
@@ -833,7 +832,7 @@ const UsersPage = () => {
           content: { 
             padding: '16px',
             backgroundColor: '#000',
-            border: '0.5px solid #F5C81B', // BORDE MÁS DELGADO
+            border: '0.5px solid #F5C81B',
             borderRadius: '6px',
             maxWidth: '400px',
             width: '90%',

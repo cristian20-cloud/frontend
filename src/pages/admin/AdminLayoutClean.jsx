@@ -1,185 +1,285 @@
 // src/pages/admin/AdminLayoutClean.jsx
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
-import { 
+import { Link, useLocation, Outlet } from "react-router-dom";
+import {
   FaUser, FaHome, FaBox, FaUsers, FaShoppingCart, FaChartBar,
   FaExchangeAlt, FaShieldAlt, FaTag, FaTruck, FaSignOutAlt,
-  FaUserTie, FaUserCircle, FaEnvelope
+  FaUserTie, FaUserCircle, FaStar, FaBoxOpen, FaClipboardList,
+  FaWallet, FaBell, FaCalendarAlt
 } from "react-icons/fa";
-import { 
-  initialUsers, 
-  roles, 
-  getCurrentUser,
-  getModulesByRole,
-  logout 
-} from '../../data';
+import { initialUsers, roles } from '../../data';
 
+// ===== CONSTANTES FUERA DEL COMPONENTE =====
+const allModules = [
+  { id: "dashboard", label: "Dashboard", icon: FaHome, path: "/admin/AdminDashboard" },
+  { id: "categorias", label: "Categorías", icon: FaTag, path: "/admin/Categorias" },
+  { id: "productos", label: "Productos", icon: FaBox, path: "/admin/Productos" },
+  { id: "proveedores", label: "Proveedores", icon: FaTruck, path: "/admin/ProveedoresPage" },
+  { id: "compras", label: "Compras", icon: FaShoppingCart, path: "/admin/ComprasPage" },
+  { id: "clientes", label: "Clientes", icon: FaUsers, path: "/admin/ClientesPage" },
+  { id: "ventas", label: "Ventas", icon: FaChartBar, path: "/admin/VentasPage" },
+  { id: "devoluciones", label: "Devoluciones", icon: FaExchangeAlt, path: "/admin/DevolucionesPage" },
+  { id: "usuarios", label: "Usuarios", icon: FaUser, path: "/admin/UsersPage" },
+  { id: "roles", label: "Roles", icon: FaShieldAlt, path: "/admin/RolesPages" },
+];
+
+const theme = {
+  background: "#000000",
+  sidebarBg: "#000000",
+  text: "#ffffff",
+  accent: "#F5C81B",
+  accentHover: "#FFD700",
+};
+
+// ===== COMPONENTE DE BIENVENIDA PERSONALIZADA =====
+const WelcomeDashboard = ({ user }) => {
+  const currentDate = new Date().toLocaleDateString('es-CO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "¡Buenos días!";
+    if (hour < 18) return "¡Buenas tardes!";
+    return "¡Buenas noches!";
+  };
+
+  const userName = user?.nombre || user?.Nombre || user?.name || 'Administrador';
+  const userRole = user?.role || user?.Rol || user?.userType || 'Administrador';
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)",
+      padding: "20px 30px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      overflow: "hidden"
+    }}>
+      {/* Contenido principal - POSICIONADO MÁS ARRIBA */}
+      <div style={{
+        textAlign: "center",
+        zIndex: 1,
+        maxWidth: "800px",
+        marginTop: "40px",
+      }}>
+        {/* Icono de bienvenida */}
+        <div style={{
+          width: "100px",
+          height: "100px",
+          margin: "0 auto 20px",
+          background: "linear-gradient(135deg, #F5C81B 0%, #FFD700 100%)",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 10px 40px rgba(245, 200, 27, 0.4)",
+        }}>
+          <FaUserTie size={50} color="#000" />
+        </div>
+
+        {/* Saludo personalizado */}
+        <h1 style={{
+          color: "#F5C81B",
+          fontSize: "2.5rem",
+          fontWeight: "800",
+          margin: "0 0 8px 0",
+          textShadow: "0 0 30px rgba(245, 200, 27, 0.5)",
+          letterSpacing: "1px",
+        }}>
+          {getGreeting()}
+        </h1>
+
+        {/* Nombre del usuario */}
+        <h2 style={{
+          color: "#ffffff",
+          fontSize: "1.8rem",
+          fontWeight: "700",
+          margin: "0 0 10px 0",
+          letterSpacing: "0.5px",
+        }}>
+          {userName}
+        </h2>
+
+        {/* Rol */}
+        <div style={{
+          display: "inline-block",
+          background: "rgba(245, 200, 27, 0.15)",
+          border: "1px solid rgba(245, 200, 27, 0.4)",
+          padding: "6px 20px",
+          borderRadius: "20px",
+          marginBottom: "15px",
+        }}>
+          <span style={{
+            color: "#F5C81B",
+            fontSize: "0.9rem",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+          }}>
+            {userRole}
+          </span>
+        </div>
+
+        {/* Fecha */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          color: "#9CA3AF",
+          fontSize: "0.95rem",
+          marginBottom: "25px",
+          textTransform: "capitalize",
+        }}>
+          <FaCalendarAlt color="#F5C81B" size={16} />
+          <span>{currentDate}</span>
+        </div>
+
+        {/* Mensaje de bienvenida personalizado */}
+        <p style={{
+          color: "#D1D5DB",
+          fontSize: "1.1rem",
+          lineHeight: "1.6",
+          margin: "0 0 30px 0",
+          maxWidth: "600px",
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}>
+          Bienvenido al panel de <strong style={{ color: "#F5C81B" }}>GM Caps</strong>.
+          <br />
+          {userRole === 'Administrador' 
+            ? 'Tienes acceso completo a todos los módulos del sistema.'
+            : userRole === 'Vendedor'
+            ? 'Gestiona ventas, clientes y productos disponibles.'
+            : 'Accede a los módulos asignados para tu rol.'}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ===== COMPONENTE PRINCIPAL =====
 const AdminLayoutClean = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [sidebarItems, setSidebarItems] = useState([]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Todos los módulos posibles con sus configuraciones
-  const allModules = [
-    { id: "dashboard", label: "Dashboard", icon: FaHome, path: "/admin" },
-    { id: "categories", label: "Categorías", icon: FaTag, path: "/admin/categories" },
-    { id: "products", label: "Productos", icon: FaBox, path: "/admin/products" },
-    { id: "suppliers", label: "Proveedores", icon: FaTruck, path: "/admin/suppliers" },
-    { id: "orders", label: "Compras", icon: FaShoppingCart, path: "/admin/orders" },
-    { id: "customers", label: "Clientes", icon: FaUsers, path: "/admin/customers" },
-    { id: "sales", label: "Ventas", icon: FaChartBar, path: "/admin/sales" },
-    { id: "returns", label: "Devoluciones", icon: FaExchangeAlt, path: "/admin/returns" },
-    { id: "users", label: "Usuarios", icon: FaUser, path: "/admin/users" },
-    { id: "roles", label: "Roles", icon: FaShieldAlt, path: "/admin/roles" },
-  ];
-
-  // Mapeo de módulos a IDs del sistema
-  const moduleIdMap = {
-    dashboard: "dashboard",
-    categories: "categorias",
-    products: "productos",
-    suppliers: "proveedores",
-    orders: "compras",
-    customers: "clientes",
-    sales: "ventas",
-    returns: "devoluciones",
-    users: "usuarios",
-    roles: "roles"
-  };
-
+  // ===== CARGAR USUARIO Y MÓDULOS =====
   useEffect(() => {
     const loadUserAndModules = () => {
-      // Obtener usuario desde localStorage
       const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          
-          // Buscar el usuario completo en initialUsers para obtener datos actualizados
-          const fullUser = initialUsers.find(u => 
-            u.Correo === userData.email || 
-            u.Correo === userData.Correo ||
-            u.IdUsuario === userData.IdUsuario
-          );
-          
-          if (fullUser) {
-            // Combinar datos con información completa del usuario
-            const userRole = roles.find(r => r.IdRol === fullUser.IdRol);
-            const completeUser = {
-              ...fullUser,
-              email: fullUser.Correo,
-              nombre: fullUser.Nombre,
-              role: userRole ? userRole.Nombre : 'Usuario',
-              rol: userRole ? userRole.Nombre : 'Usuario',
-              IdRol: fullUser.IdRol
-            };
-            
-            setUser(completeUser);
-            
-            // Filtrar módulos según el rol del usuario
+      if (!storedUser) {
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        const userData = JSON.parse(storedUser);
+        const fullUser = initialUsers.find(u =>
+          u.Correo === userData.email ||
+          u.Correo === userData.Correo ||
+          u.IdUsuario === userData.IdUsuario
+        );
+
+        if (fullUser) {
+          const userRole = roles.find(r => r.IdRol === fullUser.IdRol);
+          const completeUser = {
+            ...fullUser,
+            email: fullUser.Correo,
+            nombre: fullUser.Nombre,
+            role: userRole?.Nombre || 'Usuario',
+            rol: userRole?.Nombre || 'Usuario',
+            IdRol: fullUser.IdRol
+          };
+
+          setUser(completeUser);
+
+          if (fullUser.IdRol === 1) {
+            setSidebarItems(allModules);
+          } else {
             const userRoleData = roles.find(r => r.IdRol === fullUser.IdRol);
-            if (userRoleData) {
-              // Convertir los IDs de permisos del rol a IDs de módulos del sidebar
-              const userModuleIds = userRoleData.Permisos;
-              
-              // Filtrar módulos basados en los permisos del rol
-              const filteredModules = allModules.filter(module => {
-                const systemModuleId = moduleIdMap[module.id];
-                return userModuleIds.includes(systemModuleId);
-              });
-              
+            if (userRoleData?.Permisos) {
+              const filteredModules = allModules.filter(module =>
+                userRoleData.Permisos.includes(module.id)
+              );
               setSidebarItems(filteredModules);
             } else {
-              // Si no se encuentra el rol, mostrar todos los módulos (para admin por defecto)
-              setSidebarItems(allModules);
-            }
-          } else {
-            setUser(userData);
-            // Si es administrador maestro, mostrar todos los módulos
-            if (userData.IdUsuario === 999) {
               setSidebarItems(allModules);
             }
           }
-        } catch (error) {
-          console.error("Error al cargar el usuario:", error);
+        } else if (userData.IdUsuario === 999) {
+          setUser(userData);
+          setSidebarItems(allModules);
+        } else {
+          setUser(userData);
+          if (userData.userType === "admin" || userData.IdRol === 1) {
+            setSidebarItems(allModules);
+          } else {
+            setSidebarItems([]);
+          }
         }
+      } catch (error) {
+        console.error("Error al cargar el usuario: ", error);
       }
     };
-    
+
     loadUserAndModules();
-    
-    // Escuchar cambios en localStorage
-    const handleStorageChange = () => {
-      loadUserAndModules();
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'user' && e.newValue === null) {
+        window.location.href = '/login';
+      } else {
+        loadUserAndModules();
+      }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // ===== CERRAR SESIÓN =====
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('cart');
+    window.location.href = '/';
   };
 
-  const theme = {
-    background: "#000000", // Fondo negro puro
-    sidebarBg: "#000000",  // Sidebar también negro
-    text: "#ffffff",
-    accent: "#F5C81B",     // Amarillo brillante
-    border: "#374151",
-  };
-
-  // Obtener tipo de usuario y mostrar icono correspondiente
+  // ===== OBTENER ICONO Y TEXTO DE ROL =====
   const getUserTypeIcon = () => {
     if (!user) return FaUserCircle;
-    if (user.role === 'Administrador' || user.rol === 'Administrador' || user.IdRol === 1 || user.IdUsuario === 999) return FaUserTie;
-    if (user.role === 'Vendedor' || user.IdRol === 2) return FaUser;
-    if (user.role === 'Gestor de Inventario' || user.IdRol === 3) return FaBox;
-    if (user.role === 'Recursos Humanos' || user.IdRol === 4) return FaUsers;
-    if (user.role === 'Gestor de Clientes' || user.IdRol === 5) return FaUserCircle;
-    if (user.role === 'Auditor' || user.IdRol === 6) return FaChartBar;
+    if (user.IdRol === 1 || user.IdUsuario === 999) return FaUserTie;
     return FaUserCircle;
   };
 
   const getUserTypeText = () => {
     if (!user) return 'Usuario';
-    if (user.role === 'Administrador' || user.rol === 'Administrador' || user.IdRol === 1 || user.IdUsuario === 999) return 'Administrador';
-    if (user.role === 'Vendedor' || user.IdRol === 2) return 'Vendedor';
-    if (user.role === 'Gestor de Inventario' || user.IdRol === 3) return 'Gestor de Inventario';
-    if (user.role === 'Recursos Humanos' || user.IdRol === 4) return 'Recursos Humanos';
-    if (user.role === 'Gestor de Clientes' || user.IdRol === 5) return 'Gestor de Clientes';
-    if (user.role === 'Auditor' || user.IdRol === 6) return 'Auditor';
+    if (user.IdRol === 1 || user.IdUsuario === 999) return 'Administrador';
+    if (user.IdRol === 2) return 'Vendedor';
     return 'Usuario';
   };
 
   const UserIcon = getUserTypeIcon();
 
-  // Verificar si el usuario actual es administrador
-  const isAdmin = user && (user.IdRol === 1 || user.IdUsuario === 999);
-
-  // Obtener el rol específico del usuario
-  const getUserRoleDetails = () => {
-    if (!user) return null;
-    return roles.find(r => r.IdRol === user.IdRol);
-  };
-
-  const userRoleDetails = getUserRoleDetails();
+  // Verificar si estamos en /admin (ruta base)
+  const isBaseAdminRoute = location.pathname === '/admin' || location.pathname === '/admin/';
 
   return (
-    <div style={{ 
-      display: "flex", 
+    <div style={{
+      display: "flex",
       backgroundColor: theme.background,
-      minHeight: "100vh", 
+      minHeight: "100vh",
       color: "#fff",
-      fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif"
+      fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif",
     }}>
-      {/* SIDEBAR */}
+      {/* ===== SIDEBAR ===== */}
       <aside style={{
         width: "200px",
         minWidth: "200px",
@@ -187,30 +287,18 @@ const AdminLayoutClean = () => {
         height: "100vh",
         position: "sticky",
         top: 0,
-        borderRight: `1px solid ${theme.border}`,
         display: "flex",
         flexDirection: "column",
         overflowY: "hidden",
-        boxShadow: '2px 0 8px rgba(245, 200, 27, 0.15)',
+        boxShadow: 'none',
         boxSizing: 'border-box',
         zIndex: 10
       }}>
-        {/* Encabezado con información del rol — SIN BORDE INFERIOR */}
-        <div style={{ 
-          padding: '12px 16px', 
-          /* QUITADO: borderBottom: `1px solid ${theme.border}`, */
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px'
-        }}>
+        {/* Encabezado - Información del Rol */}
+        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {user && (
             <>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <UserIcon size={12} color={theme.accent} />
                 <span style={{
                   fontSize: '0.75rem',
@@ -222,25 +310,14 @@ const AdminLayoutClean = () => {
                   {getUserTypeText()}
                 </span>
               </div>
-              {userRoleDetails && userRoleDetails.Descripcion && (
-                <p style={{
-                  fontSize: '0.65rem',
-                  color: '#9CA3AF',
-                  margin: 0,
-                  textAlign: 'center',
-                  lineHeight: '1.3'
-                }}>
-                  {userRoleDetails.Descripcion}
-                </p>
-              )}
             </>
           )}
         </div>
 
-        {/* Navegación - Módulos filtrados por rol */}
-        <nav style={{ 
-          flex: 1, 
-          padding: "8px", 
+        {/* Navegación - Módulos */}
+        <nav style={{
+          flex: 1,
+          padding: "8px",
           overflowY: "auto",
           scrollbarWidth: 'thin',
           scrollbarColor: `${theme.accent}40 ${theme.sidebarBg}`
@@ -249,100 +326,108 @@ const AdminLayoutClean = () => {
             sidebarItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
-                <Link 
-                  key={item.id} 
-                  to={item.path} 
+                <Link
+                  key={item.id}
+                  to={item.path}
                   style={{
-                    display: "flex", 
-                    alignItems: "center", 
+                    display: "flex",
+                    alignItems: "center",
                     gap: "10px",
                     padding: "8px 12px",
                     borderRadius: "6px",
-                    textDecoration: "none", 
+                    textDecoration: "none",
                     color: isActive ? theme.accent : "#D1D5DB",
-                    backgroundColor: isActive ? "#F5C81B15" : "transparent", 
+                    backgroundColor: isActive ? "#F5C81B15" : "transparent",
                     marginBottom: "4px",
                     fontSize: "0.85rem",
                     transition: 'all 0.2s ease',
                     fontWeight: '500',
-                    border: isActive ? `1px solid ${theme.accent}30` : '1px solid transparent',
                     fontFamily: 'inherit'
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.backgroundColor = '#111827';
                       e.currentTarget.style.color = '#F5C81B';
-                      e.currentTarget.style.border = `1px solid ${theme.accent}20`;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = '#D1D5DB';
-                      e.currentTarget.style.border = '1px solid transparent';
                     }
                   }}
                 >
-                  <item.icon size={14} /> 
+                  <item.icon size={14} />
                   <span>{item.label}</span>
                 </Link>
               );
             })
           ) : (
-            <div style={{
-              textAlign: 'center',
-              padding: '20px',
-              color: '#6B7280',
-              fontSize: '0.8rem'
-            }}>
+            <div style={{ textAlign: 'center', padding: '20px', color: '#6B7280', fontSize: '0.8rem' }}>
               <p>No tiene módulos asignados</p>
-              <p style={{ fontSize: '0.7rem', marginTop: '5px' }}>
-                Contacte al administrador
-              </p>
+              <p style={{ fontSize: '0.7rem', marginTop: '5px' }}>Contacte al administrador</p>
             </div>
           )}
         </nav>
 
-        {/* BOTÓN CERRAR SESIÓN — ESTILO FINAL */}
-        <div style={{ 
-          borderTop: `1px solid ${theme.border}`,
+        {/* Botón Cerrar Sesión - SIN LÍNEA DIVISORIA AMARILLA */}
+        <div style={{
+          borderTop: "none",
           backgroundColor: '#000000',
-          padding: '12px 16px',
+          padding: '16px 12px',
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          height: 'auto',
-          overflow: 'hidden'
+          gap: '8px'
         }}>
-          <button 
+          <span style={{
+            fontSize: '0.65rem',
+            color: '#9CA3AF',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            fontWeight: '500'
+          }}>
+            Cerrar Sesión
+          </span>
+
+          <button
             onClick={() => setShowLogoutConfirm(true)}
             style={{
               width: "100%",
-              padding: "10px 16px",
+              padding: "10px 12px",
               color: theme.accent,
               background: "transparent",
-              border: `2px solid ${theme.accent}`,
-              borderRadius: "8px",
+              border: `1.5px solid ${theme.accent}`,
+              borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "0.8rem",
-              fontWeight: '700',
+              fontSize: "0.75rem",
+              fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
+              gap: '6px',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
               letterSpacing: '0.3px',
-              textTransform: 'uppercase',
-              boxShadow: `0 0 10px ${theme.accent}50`, // Sombra amarilla suave
+              textTransform: 'uppercase'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.accent;
+              e.currentTarget.style.color = '#000';
+              e.currentTarget.style.boxShadow = `0 0 15px ${theme.accent}60`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.accent;
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <FaSignOutAlt size={12} />
             <span>CERRAR SESIÓN</span>
           </button>
         </div>
 
-        {/* CONFIRMACIÓN DE CIERRE (oculta por defecto) */}
+        {/* Confirmación de Cierre */}
         {showLogoutConfirm && (
           <div style={{
             position: 'fixed',
@@ -350,76 +435,105 @@ const AdminLayoutClean = () => {
             left: '50%',
             transform: 'translate(-50%, -50%)',
             backgroundColor: '#000000',
-            padding: '20px',
-            borderRadius: '8px',
+            padding: '24px',
+            borderRadius: '12px',
             border: `2px solid ${theme.accent}`,
-            boxShadow: `0 0 20px ${theme.accent}50`,
+            boxShadow: `0 0 30px rgba(245, 200, 27, 0.5)`,
             zIndex: 9999,
-            textAlign: 'center'
+            textAlign: 'center',
+            minWidth: '300px'
           }}>
-            <p style={{ 
-              color: '#fff', 
-              fontSize: '0.85rem', 
-              margin: '0 0 12px 0',
-              fontWeight: '500',
+            <p style={{
+              color: '#fff',
+              fontSize: '0.9rem',
+              margin: '0 0 20px 0',
+              fontWeight: '600',
               lineHeight: '1.4'
             }}>
-              ¿Cerrar sesión de<br/><span style={{color: theme.accent, fontWeight: '600'}}>{user?.nombre || user?.Nombre || user?.username || 'Usuario'}</span>?
+              ¿Confirmar cierre de sesión?
             </p>
             <div style={{
               display: 'flex',
-              gap: '10px',
-              justifyContent: 'center'
+              gap: '12px',
+              justifyContent: 'center',
+              alignItems: 'center'
             }}>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 16px',
-                  background: theme.accent,
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit'
-                }}
-              >
-                Sí, salir
-              </button>
-              <button 
+              <button
                 onClick={() => setShowLogoutConfirm(false)}
                 style={{
-                  padding: '8px 16px',
+                  flex: 1,
+                  padding: '10px 16px',
                   background: '#1F2937',
                   color: '#D1D5DB',
                   border: '1px solid #4B5563',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   fontSize: '0.75rem',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   fontFamily: 'inherit'
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#4B5563';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#1F2937';
+                }}
               >
                 Cancelar
+              </button>
+
+              <button
+                onClick={handleLogout}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  background: theme.accent,
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = `0 0 15px ${theme.accent}80`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <FaSignOutAlt size={12} />
+                <span>Sí, salir</span>
               </button>
             </div>
           </div>
         )}
       </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main style={{ 
-        flex: 1, 
-        padding: "20px",
+      {/* ===== CONTENIDO PRINCIPAL ===== */}
+      <main style={{
+        flex: 1,
+        padding: "0",
         overflowY: 'auto',
         height: '100vh',
         backgroundColor: theme.background,
         fontFamily: 'inherit'
       }}>
-        <Outlet /> 
+        {/* ✅ MOSTRAR BIENVENIDA SI ESTÁ EN /admin */}
+        {isBaseAdminRoute ? (
+          <WelcomeDashboard user={user} />
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   );

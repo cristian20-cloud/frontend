@@ -1,746 +1,400 @@
 // src/pages/Login.jsx
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaEnvelope, FaLock, FaUser, FaCheckCircle } from 'react-icons/fa';
+import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom"; // 👈 ELIMINADO useNavigate
+import { FaArrowLeft } from "react-icons/fa";
+import { validateCustomerCredentials, validateUserCredentials, registerCustomer, roles } from "../data";
 
-// Importar desde data.js
-import { 
-  initialUsers, 
-  roles, 
-  adminHardcodedUser, 
-  validateUserCredentials,
-  getModulesByRole,
-  loginUser 
-} from '../data';
-
-const Login = ({ onLogin }) => {
-  const [activeTab, setActiveTab] = useState('login');
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
+const Login = () => {
+  // 👈 ELIMINADO const navigate = useNavigate();
+  const [view, setView] = useState("auth");
+  const [activeTab, setActiveTab] = useState("login");
+  const [error, setError] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    documentType: "Cédula de Identidad",
+    documentNumber: "",
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: ""
   });
-  const [error, setError] = useState('');
-  const [currentView, setCurrentView] = useState('login'); // 'login', 'forgot', 'reset', 'email-sent'
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [resetData, setResetData] = useState({ password: '', confirmPassword: '' });
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
 
-  // === FUNCIÓN DE LOGIN MEJORADA ===
-  const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  // Recuperación
+  const [recoverMethod, setRecoverMethod] = useState("email");
+  const [recoverTo, setRecoverTo] = useState("");
+  const [sentCode, setSentCode] = useState("");
+  const [typedCode, setTypedCode] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [newPass2, setNewPass2] = useState("");
 
-    setTimeout(() => {
-      // Usar la función loginUser de data.js que maneja todo el proceso
-      const result = loginUser(loginData.email, loginData.password);
-      
-      if (result.success) {
-        const normalizedUser = result.user;
-        
-        // Guardar en localStorage con estructura consistente
-        localStorage.setItem('user', JSON.stringify(normalizedUser));
-        localStorage.setItem('userPermissions', JSON.stringify(normalizedUser.Permisos));
-        
-        // Llamar a la función onLogin si existe
-        if (onLogin) onLogin(normalizedUser);
-        
-        // Redirigir a /admin para TODOS los usuarios
-        navigate('/admin');
-      } else {
-        setError(result.message || 'Email o contraseña incorrectos');
-      }
-      
-      setIsLoading(false);
-    }, 1000);
-  };
+  // 👁️ Toggles
+  const [showLoginPass, setShowLoginPass] = useState(false);
+  const [showRegPass, setShowRegPass] = useState(false);
+  const [showRegPass2, setShowRegPass2] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showNewPass2, setShowNewPass2] = useState(false);
 
-  // === FUNCIÓN DE REGISTRO ACTUALIZADA ===
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
-    
-    if (registerData.password !== registerData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-    
-    if (registerData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-    
-    // Verificar si el email ya existe (en initialUsers o localStorage)
-    const emailExistsInInitial = initialUsers.some(u => u.Correo === registerData.email);
-    
-    // Verificar en localStorage
-    const storedUser = localStorage.getItem('user');
-    let emailExistsInLocal = false;
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        if (user.Correo === registerData.email || user.email === registerData.email) {
-          emailExistsInLocal = true;
-        }
-      } catch (e) {
-        console.error('Error parsing user:', e);
-      }
-    }
+  const resetMessages = () => { setError(""); setInfoMsg(""); };
 
-    if (emailExistsInInitial || emailExistsInLocal) {
-      setError('Este email ya está registrado');
-      return;
-    }
+  // ===== ESTILOS =====
+  const styles = useMemo(() => {
+    const inputBase = { width: "100%", padding: "8px 12px", borderRadius: "12px", backgroundColor: "#0f1b2a", border: "1px solid rgba(255,255,255,0.16)", color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box" };
+    const tabWrap = { display: "flex", backgroundColor: "#233647", borderRadius: "16px", padding: "4px", marginBottom: "14px", gap: "6px" };
+    const tabBtn = (active) => ({ flex: 1, padding: "6px 10px", borderRadius: "14px", border: "none", fontSize: "13px", fontWeight: 500, backgroundColor: active ? "#FFC107" : "transparent", color: active ? "#000" : "#fff", cursor: "pointer", transition: "0.15s ease", lineHeight: 1.2 });
+    const pillWrap = { display: "flex", gap: "6px", backgroundColor: "#233647", padding: "4px", borderRadius: "16px", marginBottom: "12px" };
+    const pillBtn = (active) => ({ flex: 1, padding: "6px 10px", borderRadius: "14px", border: "none", fontSize: "12px", fontWeight: 500, backgroundColor: active ? "#FFC107" : "transparent", color: active ? "#000" : "#fff", cursor: "pointer" });
+    const mainBtn = { width: "100%", padding: "9px 12px", borderRadius: "12px", fontWeight: 500, fontSize: "14px", border: "none", cursor: "pointer", backgroundColor: "#FFC107", color: "#000" };
+    const secondaryBtn = { width: "100%", padding: "9px 12px", borderRadius: "12px", fontWeight: 500, fontSize: "13px", border: "1px solid rgba(255,255,255,0.18)", cursor: "pointer", backgroundColor: "transparent", color: "#fff" };
+    const linkBtn = { background: "none", border: "none", color: "#FFC107", fontSize: "12px", cursor: "pointer", fontWeight: 500, padding: 0, textDecoration: "none" };
+    const inputWrap = { position: "relative", width: "100%" };
+    const eyeBtn = { position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "rgba(255,255,255,0.75)", fontSize: "14px", padding: "4px", lineHeight: 1 };
 
-    // Crear nuevo usuario con estructura consistente
-    const newUserId = Math.max(...initialUsers.map(u => u.IdUsuario)) + 1;
-    const vendedorRole = roles.find(r => r.IdRol === 2); // Rol Vendedor por defecto (para el sistema)
-    
-    const newUser = {
-      IdUsuario: newUserId,
-      Nombre: registerData.name,
-      Correo: registerData.email,
-      IdRol: 2, // Vendedor por defecto para nuevos registros (esto se gestiona en el admin)
-      Clave: registerData.password,
-      Estado: true,
-      Permisos: vendedorRole ? vendedorRole.Permisos : ["dashboard", "ventas", "devoluciones", "clientes"],
-      role: 'vendedor' // Este campo también se puede actualizar en el admin
+    return {
+      page: { minHeight: "100vh", background: "#a9a9a9", display: "flex", justifyContent: "center", alignItems: "center", padding: "18px", position: "relative" },
+      card: { width: "100%", maxWidth: "400px", padding: "18px", backgroundColor: "#0f1115", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.10)" },
+      brand: { textAlign: "center", marginBottom: "10px" },
+      brandTitle: { color: "#FFC107", margin: 0, fontWeight: 700, fontSize: "24px", letterSpacing: "0.6px" },
+      subtitle: { color: "#cfcfcf", fontSize: "13px", margin: "8px 0 0 0", lineHeight: 1.25, fontWeight: 400 },
+      tabWrap, tabBtn, pillWrap, pillBtn,
+      label: { fontSize: "12px", color: "#ddd", marginBottom: "6px", display: "block", fontWeight: 400 },
+      input: inputBase, select: { ...inputBase, cursor: "pointer" }, inputWrap, eyeBtn,
+      mainBtn, secondaryBtn, linkBtn,
+      error: { backgroundColor: "#2b1414", padding: "10px 12px", borderRadius: "10px", fontSize: "12px", color: "#ff6b6b", marginBottom: "10px", border: "1px solid rgba(255,107,107,0.25)", textAlign: "center", fontWeight: 400 },
+      info: { backgroundColor: "rgba(255,193,7,0.10)", padding: "10px 12px", borderRadius: "10px", fontSize: "12px", color: "#ffd56a", marginBottom: "10px", border: "1px solid rgba(255,193,7,0.20)", textAlign: "center", fontWeight: 400 },
+      mutedText: { marginTop: "10px", textAlign: "center", color: "rgba(255,255,255,0.55)", fontSize: "11px", fontWeight: 400 },
+      backLink: { position: "absolute", top: "18px", left: "20px", display: "flex", alignItems: "center", gap: "7px", color: "#000", textDecoration: "none", fontSize: "13px", fontWeight: 500, transition: "0.2s ease" },
+      row2: { display: "flex", gap: "12px", flexWrap: "wrap" },
+      colHalf: { flex: "1 1 160px", minWidth: "160px" },
+      rowButtons: { display: "flex", gap: "10px", marginTop: "10px" },
+      colBtn: { flex: 1 }
     };
+  }, []);
 
-    // Guardar en localStorage
-    localStorage.setItem('user', JSON.stringify(newUser));
-    localStorage.setItem('userPermissions', JSON.stringify(newUser.Permisos));
-    
-    if (onLogin) onLogin(newUser);
-    
-    // Redirigir a /admin
-    navigate('/admin');
-  };
-
-  // === FUNCIÓN OLVIDÉ CONTRASEÑA ===
-  const handleForgotPassword = (e) => {
+  // ===== HANDLE LOGIN CORREGIDO =====
+  const handleLogin = (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-    setMessage('');
+    resetMessages();
+    const cleanEmail = loginData.email.trim().toLowerCase();
+    const cleanPassword = loginData.password.trim();
 
-    setTimeout(() => {
-      // Verificar si el email existe en todas las fuentes posibles
-      const existsInInitial = initialUsers.some(u => u.Correo === forgotEmail);
-      const isAdminEmail = forgotEmail === adminHardcodedUser.Correo;
+    console.log("🔍 Intentando login con:", { email: cleanEmail });
+
+    // 1️⃣ Validar usuario del sistema (ADMIN/EMPLEADO)
+    const user = validateUserCredentials(cleanEmail, cleanPassword);
+    if (user) {
+      const role = roles.find((r) => r.IdRol === user.IdRol);
+      const userData = {
+        IdUsuario: user.IdUsuario,
+        Nombre: user.Nombre.trim(),
+        Correo: user.Correo.trim(),
+        IdRol: user.IdRol,
+        Estado: user.Estado,
+        Permisos: (user.Permisos || role?.Permisos || []).map((p) => p ? p.trim() : p),
+        Rol: role?.Nombre?.trim() || "Usuario",
+        userType: "admin"
+      };
+
+      console.log("✅ Usuario del sistema logueado:", userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("userType", "admin");
       
-      // Verificar en localStorage
-      const storedUser = localStorage.getItem('user');
-      let existsInLocal = false;
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          if (user.Correo === forgotEmail || user.email === forgotEmail) {
-            existsInLocal = true;
-          }
-        } catch (e) {
-          console.error('Error parsing user:', e);
-        }
-      }
-
-      // Verificar emails de todos los usuarios en localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('user_') || key === 'user') {
-          try {
-            const userData = JSON.parse(localStorage.getItem(key));
-            if (userData.Correo === forgotEmail || userData.email === forgotEmail) {
-              existsInLocal = true;
-              break;
-            }
-          } catch (e) {
-            console.error('Error parsing user data:', e);
-          }
-        }
-      }
-
-      if (existsInInitial || existsInLocal || isAdminEmail) {
-        setMessage(`Hemos enviado un enlace de recuperación a: ${forgotEmail}`);
-        const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-        const resetData = {
-          email: forgotEmail,
-          token: resetToken,
-          expires: Date.now() + 3600000 
-        };
-        localStorage.setItem('passwordResetToken', JSON.stringify(resetData));
-        setCurrentView('email-sent');
-      } else {
-        setError('No encontramos una cuenta asociada a este email');
-      }
-      setIsLoading(false);
-    }, 1500);
-  };
-
-  // === FUNCIÓN RESET PASSWORD ===
-  const handleResetPassword = (e) => {
-    e.preventDefault();
-    if (resetData.password !== resetData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-    if (resetData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    setTimeout(() => {
-      const resetTokenData = localStorage.getItem('passwordResetToken');
-      if (!resetTokenData) {
-        setError('Token inválido o expirado');
-        setIsLoading(false);
-        return;
-      }
-
-      const { email } = JSON.parse(resetTokenData);
-      
-      // Buscar y actualizar usuario en localStorage
-      let userUpdated = false;
-      
-      // Buscar en todas las keys de localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('user_') || key === 'user') {
-          try {
-            const user = JSON.parse(localStorage.getItem(key));
-            if (user.Correo === email || user.email === email) {
-              // Actualizar contraseña
-              user.Clave = resetData.password;
-              user.password = resetData.password;
-              localStorage.setItem(key, JSON.stringify(user));
-              userUpdated = true;
-              break;
-            }
-          } catch (e) {
-            console.error('Error updating user:', e);
-          }
-        }
-      }
-
-      if (!userUpdated) {
-        // Si no está en localStorage, no podemos modificar initialUsers
-        // Pero mostramos mensaje de éxito para la demo
-        setMessage('Contraseña actualizada correctamente (demo)');
-      } else {
-        setMessage('Contraseña actualizada correctamente');
-      }
-      
-      localStorage.removeItem('passwordResetToken');
-      setIsLoading(false);
-
+      // ✅ FORZAR REDIRECCIÓN INMEDIATA
       setTimeout(() => {
-        setCurrentView('login');
-        setResetData({ password: '', confirmPassword: '' });
-      }, 2000);
-    }, 1500);
+        window.location.href = "/admin";
+      }, 100);
+      return;
+    }
+
+    // 2️⃣ Validar cliente
+    const customerResult = validateCustomerCredentials(cleanEmail, cleanPassword);
+    if (customerResult?.success) {
+      console.log("✅ Cliente logueado:", customerResult.customer);
+      
+      // Verificar si ya existía un usuario en localStorage
+      const existingUser = localStorage.getItem("user");
+      let existingPedidos = 0;
+      let existingDevoluciones = 0;
+      
+      if (existingUser) {
+        try {
+          const parsed = JSON.parse(existingUser);
+          existingPedidos = parsed.Pedidos || 0;
+          existingDevoluciones = parsed.Devoluciones || 0;
+        } catch (error) {
+          console.error("Error parsing existing user:", error);
+        }
+      }
+      
+      const customerWithStats = {
+        ...customerResult.customer,
+        Pedidos: customerResult.customer.Pedidos || existingPedidos || 0,
+        Devoluciones: customerResult.customer.Devoluciones || existingDevoluciones || 0
+      };
+      
+      localStorage.setItem("user", JSON.stringify(customerWithStats));
+      localStorage.setItem("userType", "cliente");
+      
+      // ✅ FORZAR REDIRECCIÓN INMEDIATA
+      setTimeout(() => {
+        window.location.href = "/profile";
+      }, 100);
+      return;
+    }
+
+    setError("Correo o contraseña incorrectos");
   };
 
-  // === VISTA DE LOGIN ===
-  const renderLoginView = () => (
-    <div style={{ backgroundColor: '#1A242E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <Link to="/" style={{ position: 'absolute', left: '20px', top: '20px', color: '#FFC107', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <FaArrowLeft size={14} /> Volver a la tienda
+  // ===== HANDLE REGISTER CORREGIDO =====
+  const handleRegister = (e) => {
+    e.preventDefault();
+    resetMessages();
+    if (registerData.password !== registerData.confirmPassword) {
+      setError("Las claves no coinciden");
+      return;
+    }
+    const result = registerCustomer({
+      name: registerData.name,
+      email: registerData.email,
+      password: registerData.password,
+      phone: registerData.documentNumber,
+      address: "N/A"
+    });
+    if (result?.success) {
+      console.log("✅ Cliente registrado:", result.customer);
+      
+      const newCustomerWithStats = {
+        ...result.customer,
+        Pedidos: 0,
+        Devoluciones: 0
+      };
+      
+      localStorage.setItem("user", JSON.stringify(newCustomerWithStats));
+      localStorage.setItem("userType", "cliente");
+      
+      // ✅ FORZAR REDIRECCIÓN INMEDIATA
+      setTimeout(() => {
+        window.location.href = "/profile";
+      }, 100);
+    } else {
+      setError(result?.message || "No se pudo crear la cuenta");
+    }
+  };
+
+  // ===== RECUPERACIÓN =====
+  const goRecover = () => {
+    resetMessages();
+    setRecoverMethod("email");
+    setRecoverTo("");
+    setSentCode("");
+    setTypedCode("");
+    setNewPass("");
+    setNewPass2("");
+    setShowNewPass(false);
+    setShowNewPass2(false);
+    setView("recover");
+  };
+
+  const sendRecoveryCode = (e) => {
+    e.preventDefault();
+    resetMessages();
+    if (!recoverTo.trim()) {
+      setError(recoverMethod === "email" ? "Ingresa tu correo" : "Ingresa tu teléfono");
+      return;
+    }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setSentCode(code);
+    setInfoMsg(`Código enviado por ${recoverMethod.toUpperCase()} (demo).`);
+    setView("verify");
+  };
+
+  const verifyCode = (e) => {
+    e.preventDefault();
+    resetMessages();
+    if (typedCode.trim().length !== 6) {
+      setError("El código debe tener 6 dígitos");
+      return;
+    }
+    if (typedCode.trim() !== sentCode) {
+      setError("Código incorrecto");
+      return;
+    }
+    setView("reset");
+  };
+
+  const saveNewPassword = (e) => {
+    e.preventDefault();
+    resetMessages();
+    if (newPass.length < 6) {
+      setError("La clave debe tener mínimo 6 caracteres");
+      return;
+    }
+    if (newPass !== newPass2) {
+      setError("Las claves no coinciden");
+      return;
+    }
+    setInfoMsg("Clave actualizada (demo).");
+    setView("auth");
+    setActiveTab("login");
+  };
+
+  // ===== RENDER =====
+  return (
+    <div style={styles.page}>
+      <Link to="/" style={styles.backLink} onMouseEnter={(e) => { e.currentTarget.style.color = "#FFC107"; e.currentTarget.style.transform = "translateX(3px)"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#000"; e.currentTarget.style.transform = "translateX(0px)"; }}>
+        <FaArrowLeft size={13} /> Volver a la tienda
       </Link>
 
-      {/* Ajuste 1: Reducir el maxWidth del contenedor principal */}
-      <div style={{ 
-        backgroundColor: '#121212', 
-        padding: '25px', 
-        borderRadius: '12px', 
-        width: '100%', 
-        maxWidth: '380px', 
-        boxShadow: '0 4px 20px rgba(239, 181, 9, 0.5)', 
-        border: '1px solid #333' 
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <h2 style={{ color: '#FFC107', fontSize: '20px', margin: '0' }}>GM CAPS</h2>
-          <p style={{ color: '#ccc', fontSize: '14px', margin: '10px 0 0 0' }}>Bienvenido<br />Tu tienda de gorras favorita</p>
+      <div style={styles.card}>
+        <div style={styles.brand}>
+          <h2 style={styles.brandTitle}>GM CAPS</h2>
+          <p style={styles.subtitle}>Bienvenido</p>
         </div>
 
-        {/* SECCIÓN DEMO ELIMINADA COMPLETAMENTE */}
-        {/* El bloque <div> con className="demo-access" ha sido removido. */}
+        {error && <div style={styles.error}>{error}</div>}
+        {infoMsg && <div style={styles.info}>{infoMsg}</div>}
 
-        <div style={{ display: 'flex', gap: '5px', marginBottom: '20px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#2f4c5bff' }}>
-          <button 
-            onClick={() => setActiveTab('login')} 
-            style={{ 
-              flex: 1, 
-              padding: '8px 12px', 
-              backgroundColor: activeTab === 'login' ? '#FFC107' : 'transparent', 
-              color: activeTab === 'login' ? '#000' : 'white', 
-              border: 'none', 
-              fontWeight: 'bold', 
-              cursor: 'pointer', 
-              fontSize: '14px' 
-            }}
-          >
-            Iniciar Sesión
-          </button>
-          <button 
-            onClick={() => setActiveTab('register')} 
-            style={{ 
-              flex: 1, 
-              padding: '8px 12px', 
-              backgroundColor: activeTab === 'register' ? '#FFC107' : 'transparent', 
-              color: activeTab === 'register' ? '#000' : 'white', 
-              border: 'none', 
-              fontWeight: 'bold', 
-              cursor: 'pointer', 
-              fontSize: '14px' 
-            }}
-          >
-            Registrarse
-          </button>
-        </div>
+        {view === "auth" && (
+          <>
+            <div style={styles.tabWrap}>
+              <button type="button" style={styles.tabBtn(activeTab === "login")} onClick={() => { setActiveTab("login"); resetMessages(); }}>Iniciar Sesión</button>
+              <button type="button" style={styles.tabBtn(activeTab === "register")} onClick={() => { setActiveTab("register"); resetMessages(); }}>Registrarse</button>
+            </div>
 
-        {error && <div style={{ backgroundColor: '#331a1a', color: '#f83d3dff', padding: '8px', borderRadius: '6px', marginBottom: '15px', fontSize: '12px', textAlign: 'center' }}>{error}</div>}
-        {message && <div style={{ backgroundColor: '#1a331a', color: '#4CAF50', padding: '8px', borderRadius: '6px', marginBottom: '15px', fontSize: '12px', textAlign: 'center' }}>{message}</div>}
+            {activeTab === "login" && (
+              <form onSubmit={handleLogin}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={styles.label}>Email</label>
+                  <input style={styles.input} type="email" required placeholder="tu@email.com" value={loginData.email} onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={styles.label}>Clave</label>
+                  <div style={styles.inputWrap}>
+                    <input style={{ ...styles.input, paddingRight: "38px" }} type={showLoginPass ? "text" : "password"} required placeholder="••••••••" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} />
+                    <button type="button" style={styles.eyeBtn} onClick={() => setShowLoginPass((s) => !s)}>{showLoginPass ? "🙈" : "👁️"}</button>
+                  </div>
+                </div>
+                <button type="submit" style={styles.mainBtn}>Iniciar Sesión</button>
+                <div style={{ textAlign: "center", marginTop: 10 }}>
+                  <button type="button" style={styles.linkBtn} onClick={goRecover}>¿Olvidaste tu clave?</button>
+                </div>
+              </form>
+            )}
 
-        {activeTab === 'login' && (
-          <form onSubmit={handleLoginSubmit}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-                <FaEnvelope style={{ marginRight: '6px' }} /> Email
-              </label>
-              <input 
-                type="email" 
-                value={loginData.email} 
-                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} 
-                placeholder="tu@email.com" 
-                required 
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
-                  borderRadius: '6px', 
-                  backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                  border: '1px solid #948f8fff', // Borde más claro para contraste
-                  color: 'white', 
-                  fontSize: '14px' 
-                }} 
-              />
-            </div>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-                <FaLock style={{ marginRight: '6px' }} /> Contraseña
-              </label>
-              <input 
-                type="password" 
-                value={loginData.password} 
-                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} 
-                placeholder="••••••••" 
-                required 
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
-                  borderRadius: '6px', 
-                  backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                  border: '1px solid #c1babaff', // Borde más claro para contraste
-                  color: 'white', 
-                  fontSize: '14px' 
-                }} 
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                fontSize: '14px', 
-                fontWeight: 'bold', 
-                borderRadius: '6px', 
-                backgroundColor: isLoading ? '#666' : '#FFC107', 
-                color: isLoading ? '#999' : '#000', 
-                border: 'none', 
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                opacity: isLoading ? 0.7 : 1
-              }}
-            >
-              {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
-            </button>
-            <div style={{ textAlign: 'center', marginTop: '15px' }}>
-              <button 
-                type="button" 
-                onClick={() => setCurrentView('forgot')} 
-                style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  color: '#FFC107', 
-                  fontSize: '14px', 
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
-          </form>
+            {activeTab === "register" && (
+              <form onSubmit={handleRegister}>
+                <div style={styles.row2}>
+                  <div style={styles.colHalf}>
+                    <label style={styles.label}>Tipo de Documento</label>
+                    <select style={styles.select} value={registerData.documentType} onChange={(e) => setRegisterData({ ...registerData, documentType: e.target.value })}>
+                      <option>Cédula de Identidad</option>
+                      <option>Cédula de Extranjería</option>
+                      <option>Pasaporte</option>
+                      <option>NIT</option>
+                    </select>
+                  </div>
+                  <div style={styles.colHalf}>
+                    <label style={styles.label}>Número de Documento</label>
+                    <input style={styles.input} type="text" required placeholder="123456789" value={registerData.documentNumber} onChange={(e) => setRegisterData({ ...registerData, documentNumber: e.target.value })} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, marginBottom: 12 }}>
+                  <label style={styles.label}>Nombre Completo</label>
+                  <input style={styles.input} type="text" required placeholder="Juan Pérez" value={registerData.name} onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={styles.label}>Correo</label>
+                  <input style={styles.input} type="email" required placeholder="tu@email.com" value={registerData.email} onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={styles.label}>Clave</label>
+                  <div style={styles.inputWrap}>
+                    <input style={{ ...styles.input, paddingRight: "38px" }} type={showRegPass ? "text" : "password"} required placeholder="••••••••" value={registerData.password} onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })} />
+                    <button type="button" style={styles.eyeBtn} onClick={() => setShowRegPass((s) => !s)}>{showRegPass ? "🙈" : "👁️"}</button>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={styles.label}>Confirmar Clave</label>
+                  <div style={styles.inputWrap}>
+                    <input style={{ ...styles.input, paddingRight: "38px" }} type={showRegPass2 ? "text" : "password"} required placeholder="••••••••" value={registerData.confirmPassword} onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })} />
+                    <button type="button" style={styles.eyeBtn} onClick={() => setShowRegPass2((s) => !s)}>{showRegPass2 ? "🙈" : "👁️"}</button>
+                  </div>
+                </div>
+                <button type="submit" style={styles.mainBtn}>Crear Cuenta</button>
+                <div style={styles.mutedText}>Al registrarte, aceptas nuestros términos y condiciones</div>
+              </form>
+            )}
+          </>
         )}
 
-        {activeTab === 'register' && (
-          <form onSubmit={handleRegisterSubmit}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-                <FaUser style={{ marginRight: '6px' }} /> Nombre Completo
-              </label>
-              <input 
-                type="text" 
-                value={registerData.name} 
-                onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })} 
-                placeholder="Juan Pérez" 
-                required 
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
-                  borderRadius: '6px', 
-                  backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                  border: '1px solid #948f8fff', // Borde más claro para contraste
-                  color: 'white', 
-                  fontSize: '14px' 
-                }} 
-              />
+        {view === "recover" && (
+          <>
+            <div style={{ marginBottom: 8, color: "#fff", fontSize: 14, fontWeight: 400 }}>Recuperar clave</div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 12, marginBottom: 10 }}>Elige cómo quieres recibir el código</div>
+            <div style={styles.pillWrap}>
+              <button type="button" style={styles.pillBtn(recoverMethod === "email")} onClick={() => { setRecoverMethod("email"); setRecoverTo(""); resetMessages(); }}>Email</button>
+              <button type="button" style={styles.pillBtn(recoverMethod === "sms")} onClick={() => { setRecoverMethod("sms"); setRecoverTo(""); resetMessages(); }}>SMS</button>
+              <button type="button" style={styles.pillBtn(recoverMethod === "whatsapp")} onClick={() => { setRecoverMethod("whatsapp"); setRecoverTo(""); resetMessages(); }}>WhatsApp</button>
             </div>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-                <FaEnvelope style={{ marginRight: '6px' }} /> Email
-              </label>
-              <input 
-                type="email" 
-                value={registerData.email} 
-                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })} 
-                placeholder="tu@email.com" 
-                required 
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
-                  borderRadius: '6px', 
-                  backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                  border: '1px solid #948f8fff', // Borde más claro para contraste
-                  color: 'white', 
-                  fontSize: '14px' 
-                }} 
-              />
-            </div>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-                <FaLock style={{ marginRight: '6px' }} /> Contraseña
-              </label>
-              <input 
-                type="password" 
-                value={registerData.password} 
-                onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })} 
-                placeholder="••••••••" 
-                required 
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
-                  borderRadius: '6px', 
-                  backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                  border: '1px solid #948f8fff', // Borde más claro para contraste
-                  color: 'white', 
-                  fontSize: '14px' 
-                }} 
-              />
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-                <FaLock style={{ marginRight: '6px' }} /> Confirmar Contraseña
-              </label>
-              <input 
-                type="password" 
-                value={registerData.confirmPassword} 
-                onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })} 
-                placeholder="••••••••" 
-                required 
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
-                  borderRadius: '6px', 
-                  backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                  border: '1px solid #948f8fff', // Borde más claro para contraste
-                  color: 'white', 
-                  fontSize: '14px' 
-                }} 
-              />
-            </div>
-            {/* Ajuste 2: Texto del botón - Eliminado "(Vendedor)" */}
-            <button 
-              type="submit" 
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                fontSize: '14px', 
-                fontWeight: 'bold', 
-                borderRadius: '6px', 
-                backgroundColor: '#FFC107', 
-                color: '#000', 
-                border: 'none', 
-                cursor: 'pointer' 
-              }}
-            >
-              Crear Cuenta
-            </button>
-            {/* Ajuste 3: Eliminada la nota sobre "Vendedores" */}
-            {/* <p style={{ color: '#aaa', fontSize: '11px', textAlign: 'center', marginTop: '10px' }}>
-              Los nuevos usuarios se registran como Vendedores
-            </p> */}
-          </form>
+            <form onSubmit={sendRecoveryCode}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={styles.label}>{recoverMethod === "email" ? "Correo" : "Teléfono"}</label>
+                <input style={styles.input} type={recoverMethod === "email" ? "email" : "tel"} placeholder={recoverMethod === "email" ? "tu@email.com" : "3001234567"} value={recoverTo} onChange={(e) => setRecoverTo(e.target.value)} required />
+              </div>
+              <div style={styles.rowButtons}>
+                <div style={styles.colBtn}><button type="submit" style={styles.mainBtn}>Enviar código</button></div>
+                <div style={styles.colBtn}><button type="button" style={styles.secondaryBtn} onClick={() => { setView("auth"); setActiveTab("login"); resetMessages(); }}>Cancelar</button></div>
+              </div>
+            </form>
+          </>
+        )}
+
+        {view === "verify" && (
+          <>
+            <div style={{ marginBottom: 8, color: "#fff", fontSize: 14, fontWeight: 400 }}>Verificar código</div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 12, marginBottom: 10 }}>Ingresa el código de 6 dígitos</div>
+            <form onSubmit={verifyCode}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={styles.label}>Código</label>
+                <input style={styles.input} inputMode="numeric" maxLength={6} placeholder="123456" value={typedCode} onChange={(e) => setTypedCode(e.target.value.replace(/\D/g, ""))} required />
+              </div>
+              <div style={styles.rowButtons}>
+                <div style={styles.colBtn}><button type="submit" style={styles.mainBtn}>Confirmar</button></div>
+                <div style={styles.colBtn}><button type="button" style={styles.secondaryBtn} onClick={() => { setView("recover"); resetMessages(); }}>Cancelar</button></div>
+              </div>
+            </form>
+          </>
+        )}
+
+        {view === "reset" && (
+          <>
+            <div style={{ marginBottom: 8, color: "#fff", fontSize: 14, fontWeight: 400 }}>Nueva clave</div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 12, marginBottom: 10 }}>Crea tu nueva clave</div>
+            <form onSubmit={saveNewPassword}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={styles.label}>Nueva clave</label>
+                <div style={styles.inputWrap}>
+                  <input style={{ ...styles.input, paddingRight: "38px" }} type={showNewPass ? "text" : "password"} placeholder="••••••••" value={newPass} onChange={(e) => setNewPass(e.target.value)} required />
+                  <button type="button" style={styles.eyeBtn} onClick={() => setShowNewPass((s) => !s)}>{showNewPass ? "🙈" : "👁️"}</button>
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={styles.label}>Confirmar clave</label>
+                <div style={styles.inputWrap}>
+                  <input style={{ ...styles.input, paddingRight: "38px" }} type={showNewPass2 ? "text" : "password"} placeholder="••••••••" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} required />
+                  <button type="button" style={styles.eyeBtn} onClick={() => setShowNewPass2((s) => !s)}>{showNewPass2 ? "🙈" : "👁️"}</button>
+                </div>
+              </div>
+              <div style={styles.rowButtons}>
+                <div style={styles.colBtn}><button type="submit" style={styles.mainBtn}>Guardar</button></div>
+                <div style={styles.colBtn}><button type="button" style={styles.secondaryBtn} onClick={() => { setView("auth"); setActiveTab("login"); resetMessages(); }}>Cancelar</button></div>
+              </div>
+            </form>
+          </>
         )}
       </div>
     </div>
   );
-
-  // === VISTA OLVIDÉ CONTRASEÑA ===
-  const renderForgotPasswordView = () => (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <button 
-        onClick={() => setCurrentView('login')} 
-        style={{ 
-          position: 'absolute', 
-          left: '20px', 
-          top: '20px', 
-          color: '#FFC107', 
-          fontSize: '14px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px', 
-          background: 'none', 
-          border: 'none', 
-          cursor: 'pointer' 
-        }}
-      >
-        <FaArrowLeft size={14} /> Volver al login
-      </button>
-      
-      {/* Ajuste 1: Reducir el maxWidth del contenedor principal */}
-      <div style={{ 
-        backgroundColor: '#121212', 
-        padding: '25px', 
-        borderRadius: '12px', 
-        width: '100%', 
-        maxWidth: '380px', 
-        boxShadow: '0 4px 20px rgba(239, 181, 9, 0.5)', 
-        border: '1px solid #333' 
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <h2 style={{ color: '#FFC107', fontSize: '20px', margin: '0' }}>GM CAPS</h2>
-          <p style={{ color: '#ccc', fontSize: '14px', margin: '10px 0 0 0' }}>Recuperar Contraseña</p>
-        </div>
-        
-        {error && <div style={{ backgroundColor: '#331a1a', color: '#f83d3dff', padding: '8px', borderRadius: '6px', marginBottom: '15px', fontSize: '12px', textAlign: 'center' }}>{error}</div>}
-        
-        <form onSubmit={handleForgotPassword}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-              <FaEnvelope style={{ marginRight: '6px' }} /> Email
-            </label>
-            <input 
-              type="email" 
-              value={forgotEmail} 
-              onChange={(e) => setForgotEmail(e.target.value)} 
-              placeholder="tu@email.com" 
-              required 
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                borderRadius: '6px', 
-                backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                border: '1px solid #948f8fff', // Borde más claro para contraste
-                color: 'white', 
-                fontSize: '14px' 
-              }} 
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={isLoading}
-            style={{ 
-              width: '100%', 
-              padding: '10px', 
-              fontSize: '14px', 
-              fontWeight: 'bold', 
-              borderRadius: '6px', 
-              backgroundColor: isLoading ? '#666' : '#FFC107', 
-              color: isLoading ? '#999' : '#000', 
-              border: 'none', 
-              cursor: isLoading ? 'not-allowed' : 'pointer', 
-              opacity: isLoading ? 0.7 : 1 
-            }}
-          >
-            {isLoading ? 'Enviando...' : 'Enviar Email de Recuperación'}
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={() => setCurrentView('login')} 
-            style={{ 
-              width: '100%', 
-              background: 'none', 
-              border: 'none', 
-              color: '#FFC107', 
-              fontSize: '14px', 
-              padding: '8px', 
-              cursor: 'pointer', 
-              marginTop: '10px',
-              textDecoration: 'underline'
-            }}
-          >
-            Cancelar y volver al login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-
-  // === VISTA EMAIL ENVIADO ===
-  const renderEmailSentView = () => (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      {/* Ajuste 1: Reducir el maxWidth del contenedor principal */}
-      <div style={{ 
-        backgroundColor: '#121212', 
-        padding: '30px', 
-        borderRadius: '12px', 
-        width: '100%', 
-        maxWidth: '380px', 
-        boxShadow: '0 4px 20px rgba(239, 181, 9, 0.5)', 
-        border: '1px solid #333', 
-        textAlign: 'center' 
-      }}>
-        <FaCheckCircle size={40} color="#4CAF50" style={{ marginBottom: '20px' }} />
-        <h2 style={{ color: '#FFC107', fontSize: '20px', margin: '0 0 10px 0' }}>GM CAPS</h2>
-        <h3 style={{ color: '#4CAF50', fontSize: '18px', margin: '0 0 20px 0' }}>Email Enviado</h3>
-        <p style={{ color: '#ccc', fontSize: '14px', marginBottom: '10px' }}>
-          Hemos enviado un enlace de recuperación a: <br/> 
-          <strong style={{ color: '#FFC107' }}>{forgotEmail}</strong>
-        </p>
-        <p style={{ color: '#aaa', fontSize: '12px', marginBottom: '20px' }}>
-          (Demo: Haz clic en Continuar para simular el proceso)
-        </p>
-        <button 
-          onClick={() => setCurrentView('reset')} 
-          style={{ 
-            padding: '10px 20px', 
-            backgroundColor: '#FFC107', 
-            color: '#000', 
-            border: 'none', 
-            borderRadius: '6px', 
-            fontWeight: 'bold', 
-            cursor: 'pointer' 
-          }}
-        >
-          Continuar Demo
-        </button>
-      </div>
-    </div>
-  );
-
-  // === VISTA RESET PASSWORD ===
-  const renderResetPasswordView = () => (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      {/* Ajuste 1: Reducir el maxWidth del contenedor principal */}
-      <div style={{ 
-        backgroundColor: '#121212', 
-        padding: '25px', 
-        borderRadius: '12px', 
-        width: '100%', 
-        maxWidth: '380px', 
-        boxShadow: '0 4px 20px rgba(239, 181, 9, 0.5)', 
-        border: '1px solid #333' 
-      }}>
-        <h2 style={{ color: '#FFC107', textAlign: 'center', marginBottom: '20px' }}>Nueva Contraseña</h2>
-        
-        {error && <div style={{ backgroundColor: '#331a1a', color: '#f83d3dff', padding: '8px', borderRadius: '6px', marginBottom: '15px', fontSize: '12px', textAlign: 'center' }}>{error}</div>}
-        {message && <div style={{ backgroundColor: '#1a331a', color: '#4CAF50', padding: '8px', borderRadius: '6px', marginBottom: '15px', fontSize: '12px', textAlign: 'center' }}>{message}</div>}
-        
-        <form onSubmit={handleResetPassword}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-              Nueva Contraseña
-            </label>
-            <input 
-              type="password" 
-              value={resetData.password} 
-              onChange={(e) => setResetData({ ...resetData, password: e.target.value })} 
-              placeholder="••••••••" 
-              required 
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                borderRadius: '6px', 
-                backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                border: '1px solid #948f8fff', // Borde más claro para contraste
-                color: 'white', 
-                fontSize: '14px' 
-              }} 
-            />
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', color: '#ddd', fontSize: '12px' }}>
-              Confirmar Contraseña
-            </label>
-            <input 
-              type="password" 
-              value={resetData.confirmPassword} 
-              onChange={(e) => setResetData({ ...resetData, confirmPassword: e.target.value })} 
-              placeholder="••••••••" 
-              required 
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                borderRadius: '6px', 
-                backgroundColor: '#2f424dff', // Fondo azul oscuro para inputs
-                border: '1px solid #948f8fff', // Borde más claro para contraste
-                color: 'white', 
-                fontSize: '14px' 
-              }} 
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={isLoading}
-            style={{ 
-              width: '100%', 
-              padding: '10px', 
-              backgroundColor: isLoading ? '#666' : '#FFC107', 
-              color: isLoading ? '#999' : '#000', 
-              border: 'none', 
-              borderRadius: '6px', 
-              fontWeight: 'bold',
-              cursor: isLoading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {isLoading ? 'Actualizando...' : 'Cambiar Contraseña'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-
-  // === RENDER PRINCIPAL ===
-  switch (currentView) {
-    case 'forgot': 
-      return renderForgotPasswordView();
-    case 'email-sent': 
-      return renderEmailSentView();
-    case 'reset': 
-      return renderResetPasswordView();
-    default: 
-      return renderLoginView();
-  }
 };
 
 export default Login;

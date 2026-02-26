@@ -1,146 +1,214 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useState, useMemo } from "react";
 
-// Importaciones de componentes y páginas
-import Header from './components/Header';
-import Login from './pages/Login';
-import Home from './pages/Home';
-// --- NUEVA IMPORTACIÓN ---
-import Productos from './pages/Productos'; // <-- ¡Esta línea es crucial!
-// Páginas principales
-import Categorias from './pages/Categorias';
-import Ofertas from './pages/Ofertas';
-import Profile from './pages/Profile';
-import Cart from './pages/Cart';
-import SearchResults from './pages/SearchResults';
+// ===== COMPONENTES PÚBLICOS =====
+import Header from "./components/Header";
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import Productos from "./pages/Productos";
+import Categorias from "./pages/Categorias";
+import Ofertas from "./pages/Ofertas";
+import Profile from "./pages/Profile";
+import Cart from "./pages/Cart";
+import SearchResults from "./pages/SearchResults";
 
-// Páginas de administración
-import AdminLayoutClean from './pages/admin/AdminLayoutClean';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminCategorias from './pages/admin/Categorias';
-import ClientesPage from './pages/admin/ClientesPage';
-import ProveedoresPage from './pages/admin/ProveedoresPage';
-import ProductosPage from './pages/admin/Productos';
-import DevolucionesPage from './pages/admin/DevolucionesPage';
-import RolesPage from './pages/admin/RolesPage';
-import UsersPage from './pages/admin/UsersPage';
-import VentasPage from './pages/admin/VentasPage';
-import ComprasPage from './pages/admin/ComprasPage';
+// ===== COMPONENTES ADMIN =====
+import AdminLayoutClean from "./pages/admin/AdminLayoutClean";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCategorias from "./pages/admin/Categorias";
+import ClientesPage from "./pages/admin/ClientesPage";
+import ProveedoresPage from "./pages/admin/ProveedoresPage";
+import ProductosPage from "./pages/admin/Productos";
+import DevolucionesPage from "./pages/admin/DevolucionesPage";
+import RolesPage from "./pages/admin/RolesPage";
+import UsersPage from "./pages/admin/UsersPage";
+import VentasPage from "./pages/admin/VentasPage";
+import ComprasPage from "./pages/admin/ComprasPage";
+
+// ===== 🔐 PROTECTED ROUTE =====
+const ProtectedRoute = ({ user, children }) => {
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.userType !== "admin" && user.IdRol !== 1)
+    return <Navigate to="/" replace />;
+  return children;
+};
 
 const AppContent = () => {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  
-  const [cartItems, setCartItems] = useState(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
   const location = useLocation();
-  const navigate = useNavigate();
 
-  const handleLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    navigate('/');
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.IdRol === 1 && !parsed.userType) {
+          parsed.userType = "admin";
+        }
+        return parsed;
+      }
+      return null;
+    } catch {
+      localStorage.removeItem("user");
+      return null;
+    }
+  });
+
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem("cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const updateCart = (items) => {
+    setCartItems(items);
+    localStorage.setItem("cart", JSON.stringify(items));
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    navigate('/');
-  };
-
-  const handleLoginClick = () => {
-    navigate('/login');
-  };
-
-  const updateCart = (newCartItems) => {
-    setCartItems(newCartItems);
-    localStorage.setItem('cart', JSON.stringify(newCartItems));
-  };
-
-  // Función para agregar productos al carrito
   const addToCart = (product) => {
-    const existingItem = cartItems.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      const updatedCart = cartItems.map(item =>
-        item.id === product.id
-          ? { ...item, quantity: (item.quantity || 1) + 1 }
-          : item
+    const existing = cartItems.find((i) => i.id === product.id);
+    if (existing) {
+      updateCart(
+        cartItems.map((i) =>
+          i.id === product.id
+            ? { ...i, quantity: (i.quantity || 1) + 1 }
+            : i
+        )
       );
-      updateCart(updatedCart);
     } else {
       updateCart([...cartItems, { ...product, quantity: 1 }]);
     }
   };
 
-  const cartItemCount = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
 
-  const showHeader = !location.pathname.startsWith('/admin') && location.pathname !== '/login';
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+  };
+
+  const cartItemCount = useMemo(
+    () => cartItems.reduce((t, i) => t + (i.quantity || 1), 0),
+    [cartItems]
+  );
+
+  const showHeader =
+    !location.pathname.startsWith("/admin") &&
+    location.pathname !== "/login";
 
   return (
     <>
       {showHeader && (
         <Header
           user={user}
-          onLoginClick={handleLoginClick}
+          onLoginClick={() => (window.location.href = "/login")}
           onLogout={handleLogout}
           cartItemCount={cartItemCount}
           cartItems={cartItems}
           updateCart={updateCart}
         />
       )}
-      
       <Routes>
-        {/* RUTAS PÚBLICAS PRINCIPALES */}
-        {/* --- ¡CORRECCIÓN PRINCIPAL AQUÍ! --- */}
-        <Route path="/" element={<Home addToCart={addToCart} />} />
+        {/* RUTAS PÚBLICAS */}
+        <Route
+          path="/"
+          element={
+            <Home
+              addToCart={addToCart}
+              updateCart={updateCart}
+              cartItems={cartItems}
+            />
+          }
+        />
+
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        
-        {/* RUTAS DEL HEADER */}
         <Route path="/categorias" element={<Categorias />} />
         <Route path="/ofertas" element={<Ofertas />} />
-        {/* --- NUEVA RUTA AÑADIDA AQUÍ --- */}
-        <Route path="/productos" element={<Productos addToCart={addToCart} />} />
-        <Route 
-          path="/cart" 
+
+        <Route
+          path="/productos"
           element={
-            <Cart 
-              cartItems={cartItems} 
-              updateCart={updateCart} 
-              user={user} 
+            <Productos
+              addToCart={addToCart}
+              updateCart={updateCart}
+              cartItems={cartItems}
             />
-          } 
-        />
-        <Route path="/perfil" element={<Profile />} />
-        <Route 
-          path="/search" 
-          element={<SearchResults addToCart={addToCart} />} 
+          }
         />
 
-        {/* RUTAS ADMIN (Protegidas por autenticación) */}
-        <Route 
-          path="/admin" 
-          element={user ? <AdminLayoutClean /> : <Navigate to="/login" />}
+        {/* ✅ RUTA DEL PERFIL - AGREGADA */}
+        <Route
+          path="/profile"
+          element={
+            <Profile
+              user={user}
+              onLogout={handleLogout}
+            />
+          }
+        />
+
+        {/* ✅ RUTA ALTERNATIVA /perfil */}
+        <Route
+          path="/perfil"
+          element={
+            <Profile
+              user={user}
+              onLogout={handleLogout}
+            />
+          }
+        />
+
+        <Route
+          path="/cart"
+          element={
+            <Cart
+              cartItems={cartItems}
+              updateCart={updateCart}
+              user={user}
+              onLogout={handleLogout}
+            />
+          }
+        />
+
+        <Route
+          path="/search"
+          element={
+            <SearchResults
+              addToCart={addToCart}
+              updateCart={updateCart}
+              cartItems={cartItems}
+            />
+          }
+        />
+
+        {/* ADMIN */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute user={user}>
+              <AdminLayoutClean />
+            </ProtectedRoute>
+          }
         >
-          <Route index element={<AdminDashboard />} />
-          <Route path="categories" element={<AdminCategorias />} />
-          <Route path="products" element={<ProductosPage />} />
-          <Route path="customers" element={<ClientesPage />} />
-          <Route path="suppliers" element={<ProveedoresPage />} />
-          <Route path="sales" element={<VentasPage />} />
-          <Route path="orders" element={<ComprasPage />} />
-          <Route path="returns" element={<DevolucionesPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="roles" element={<RolesPage />} />
+          <Route path="AdminDashboard" element={<AdminDashboard user={user} />} />
+          <Route path="Categorias" element={<AdminCategorias />} />
+          <Route path="Productos" element={<ProductosPage />} />
+          <Route path="ProveedoresPage" element={<ProveedoresPage />} />
+          <Route path="ComprasPage" element={<ComprasPage />} />
+          <Route path="ClientesPage" element={<ClientesPage />} />
+          <Route path="VentasPage" element={<VentasPage />} />
+          <Route path="DevolucionesPage" element={<DevolucionesPage />} />
+          <Route path="UsersPage" element={<UsersPage />} />
+          <Route path="RolesPages" element={<RolesPage />} />
         </Route>
 
-        {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
