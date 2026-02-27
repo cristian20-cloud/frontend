@@ -167,7 +167,8 @@ const AdminLayoutClean = () => {
 
   useEffect(() => {
     const loadUserAndModules = () => {
-      const storedUser = localStorage.getItem('user');
+      // 👈 CAMBIADO DE localStorage a sessionStorage
+      const storedUser = sessionStorage.getItem('user');
       if (!storedUser) {
         window.location.href = '/login';
         return;
@@ -226,6 +227,7 @@ const AdminLayoutClean = () => {
     loadUserAndModules();
 
     const handleStorageChange = (e) => {
+      // 👈 TAMBIÉN CAMBIADO A sessionStorage
       if (e.key === 'user' && e.newValue === null) {
         window.location.href = '/login';
       } else {
@@ -250,9 +252,10 @@ const AdminLayoutClean = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('cart');
+    // 👈 CAMBIADO A sessionStorage
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('userType');
+    localStorage.removeItem('cart'); // El carrito sigue en localStorage
     window.location.href = '/';
   };
 
@@ -371,7 +374,7 @@ const AdminLayoutClean = () => {
           )}
         </nav>
 
-        {/* Botón Cerrar Sesión con Dropdown - SIN TEXTO DOBLE */}
+        {/* Botón Cerrar Sesión con Dropdown */}
         <div style={{
           padding: '16px 12px',
           display: 'flex',
@@ -381,7 +384,7 @@ const AdminLayoutClean = () => {
           position: 'relative'
         }} ref={dropdownRef}>
           
-          {/* Dropdown - SOLO DOS BOTONES, ARRIBA DEL BOTÓN */}
+          {/* Dropdown */}
           {showLogoutDropdown && (
             <div style={{
               position: 'absolute',
@@ -451,7 +454,7 @@ const AdminLayoutClean = () => {
             </div>
           )}
 
-          {/* Botón Principal - SIN RELLENO AMARILLO */}
+          {/* Botón Principal */}
           <button
             onClick={() => setShowLogoutDropdown(!showLogoutDropdown)}
             style={{

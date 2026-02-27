@@ -35,47 +35,82 @@ import ComprasPage from "./pages/admin/ComprasPage";
 
 // ===== 🔐 PROTECTED ROUTE =====
 const ProtectedRoute = ({ user, children }) => {
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.userType !== "admin" && user.IdRol !== 1)
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  const isAdmin = user.IdRol === 1 || user.userType === "admin";
+  
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
+  }
+  
   return children;
 };
 
 const AppContent = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  // ✅ SESSION STORAGE (SE BORRA AL CERRAR NAVEGADOR)
+  
+  // Estado del usuario con sessionStorage
   const [user, setUser] = useState(() => {
     try {
       const saved = sessionStorage.getItem("user");
       return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
+    } catch { 
+      return null; 
     }
   });
-
+  
+  // Estado del carrito
   const [cartItems, setCartItems] = useState(() => {
     try {
       const saved = localStorage.getItem("cart");
       return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+    } catch { 
+      return []; 
     }
   });
 
-  // 🔁 Redirección automática según tipo
+  // 🟢 NUEVO: Detectar cuando el servidor se desconecta
   useEffect(() => {
-    if (user) {
-      if (user.userType === "admin" || user.IdRol === 1) {
-        if (location.pathname === "/" || location.pathname === "/login") {
-          navigate("/admin/AdminDashboard", { replace: true });
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    
+    const checkServerConnection = () => {
+      fetch('/api/ping', { 
+        method: 'HEAD',
+        cache: 'no-cache',
+        mode: 'no-cors' // Esto evita errores CORS
+      }).catch(() => {
+        reconnectAttempts++;
+        console.log(`🔄 Intento de reconexión ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+        
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          console.log('❌ Servidor desconectado - Cerrando sesión');
+          handleLogout(true); // true = cierre por servidor caído
         }
-      }
-    }
-  }, [user, location.pathname, navigate]);
+      });
+    };
 
-  // 🛒 Carrito
+    // Verificar cada 5 segundos
+    const interval = setInterval(checkServerConnection, 5000);
+    
+    // Verificar también cuando la página recupera el foco
+    const handleFocus = () => {
+      reconnectAttempts = 0; // Resetear intentos al volver
+      checkServerConnection();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // FUNCIONES DEL CARRITO
   const updateCart = (items) => {
     setCartItems(items);
     localStorage.setItem("cart", JSON.stringify(items));
@@ -84,34 +119,42 @@ const AppContent = () => {
   const addToCart = (product) => {
     const existing = cartItems.find((i) => i.id === product.id);
     if (existing) {
-      updateCart(
-        cartItems.map((i) =>
-          i.id === product.id
-            ? { ...i, quantity: (i.quantity || 1) + 1 }
-            : i
-        )
-      );
+      updateCart(cartItems.map((i) =>
+        i.id === product.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i
+      ));
     } else {
       updateCart([...cartItems, { ...product, quantity: 1 }]);
     }
   };
 
-  // 🔑 LOGIN
+  // HANDLE LOGIN - Modificado para aceptar parámetro de servidor caído
   const handleLogin = (userData) => {
-    setUser(userData);
+    if (!userData) return;
+    
     sessionStorage.setItem("user", JSON.stringify(userData));
-
-    if (userData.userType === "admin" || userData.IdRol === 1) {
+    setUser(userData);
+    
+    const isAdmin = userData.IdRol === 1 || userData.userType === "admin";
+    
+    if (isAdmin) {
       navigate("/admin/AdminDashboard", { replace: true });
     } else {
       navigate("/profile", { replace: true });
     }
   };
 
-  // 🚪 LOGOUT
-  const handleLogout = () => {
+  // HANDLE LOGOUT - Modificado para manejar cierre por servidor
+  const handleLogout = (serverDisconnected = false) => {
+    console.log(serverDisconnected ? '🔌 Servidor desconectado' : '🚪 Cerrando sesión');
+    
     setUser(null);
     sessionStorage.removeItem("user");
+    
+    if (serverDisconnected) {
+      // Mostrar mensaje al usuario
+      alert('El servidor se ha desconectado. Por favor, inicia sesión nuevamente.');
+    }
+    
     navigate("/login", { replace: true });
   };
 
@@ -120,9 +163,7 @@ const AppContent = () => {
     [cartItems]
   );
 
-  const showHeader =
-    !location.pathname.startsWith("/admin") &&
-    location.pathname !== "/login";
+  const showHeader = !location.pathname.startsWith("/admin") && location.pathname !== "/login";
 
   return (
     <>
@@ -130,83 +171,31 @@ const AppContent = () => {
         <Header
           user={user}
           onLoginClick={() => navigate("/login")}
-          onLogout={handleLogout}
+          onLogout={() => handleLogout()}
           cartItemCount={cartItemCount}
           cartItems={cartItems}
           updateCart={updateCart}
         />
       )}
-
+      
       <Routes>
-        {/* RUTAS PÚBLICAS */}
-        <Route
-          path="/"
-          element={
-            <Home
-              addToCart={addToCart}
-              updateCart={updateCart}
-              cartItems={cartItems}
-            />
-          }
-        />
-
+        <Route path="/" element={<Home addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/categorias" element={<Categorias />} />
         <Route path="/ofertas" element={<Ofertas />} />
+        <Route path="/productos" element={<Productos addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />} />
+        <Route path="/profile" element={<Profile user={user} onLogout={() => handleLogout()} />} />
+        <Route path="/perfil" element={<Profile user={user} onLogout={() => handleLogout()} />} />
+        <Route path="/cart" element={<Cart cartItems={cartItems} updateCart={updateCart} user={user} onLogout={() => handleLogout()} />} />
+        <Route path="/search" element={<SearchResults addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />} />
 
-        <Route
-          path="/productos"
-          element={
-            <Productos
-              addToCart={addToCart}
-              updateCart={updateCart}
-              cartItems={cartItems}
-            />
-          }
-        />
-
-        <Route
-          path="/profile"
-          element={<Profile user={user} onLogout={handleLogout} />}
-        />
-
-        <Route
-          path="/perfil"
-          element={<Profile user={user} onLogout={handleLogout} />}
-        />
-
-        <Route
-          path="/cart"
-          element={
-            <Cart
-              cartItems={cartItems}
-              updateCart={updateCart}
-              user={user}
-              onLogout={handleLogout}
-            />
-          }
-        />
-
-        <Route
-          path="/search"
-          element={
-            <SearchResults
-              addToCart={addToCart}
-              updateCart={updateCart}
-              cartItems={cartItems}
-            />
-          }
-        />
-
-        {/* ADMIN */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute user={user}>
-              <AdminLayoutClean />
-            </ProtectedRoute>
-          }
-        >
+        {/* Rutas de admin protegidas */}
+        <Route path="/admin" element={
+          <ProtectedRoute user={user}>
+            <AdminLayoutClean />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="AdminDashboard" replace />} />
           <Route path="AdminDashboard" element={<AdminDashboard user={user} />} />
           <Route path="Categorias" element={<AdminCategorias />} />
           <Route path="Productos" element={<ProductosPage />} />
@@ -225,6 +214,7 @@ const AppContent = () => {
   );
 };
 
+// ✅ APP PRINCIPAL CON ROUTER
 export default function App() {
   return (
     <Router>
