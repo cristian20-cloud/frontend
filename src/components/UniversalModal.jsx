@@ -13,7 +13,7 @@ const UniversalModal = ({
   confirmText = "Guardar",
   actionLabel,
   customStyles = {}
-}) => {
+}) => {<
   if (!isOpen) return null;
 
   const handleConfirm = onSave || onConfirm || (() => {});

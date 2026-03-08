@@ -12,92 +12,72 @@ import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 // =============================================
 const StatusFilter = ({ filterStatus, onFilterSelect }) => {
   const [open, setOpen] = useState(false);
-  
+
   return (
     <div style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(!open)}
         style={{
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '6px', 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
           padding: '8px 12px',
-          backgroundColor: 'transparent', 
-          border: '1px solid #F5C81B', 
+          backgroundColor: 'transparent',
+          border: '1px solid #F5C81B',
           color: '#F5C81B',
-          borderRadius: '6px', 
+          borderRadius: '6px',
           fontSize: '13px',
-          cursor: 'pointer', 
-          whiteSpace: 'nowrap', 
-          minWidth: '110px', 
-          justifyContent: 'space-between', 
-          fontWeight: '600', 
-          height: '36px',
-          transition: 'all 0.2s'
-        }}
-        onMouseEnter={e => { 
-          e.target.style.backgroundColor = '#F5C81B'; 
-          e.target.style.color = '#000'; 
-        }}
-        onMouseLeave={e => { 
-          e.target.style.backgroundColor = 'transparent'; 
-          e.target.style.color = '#F5C81B'; 
+          cursor: 'pointer',
+          minWidth: '110px',
+          justifyContent: 'space-between',
+          fontWeight: '600',
+          height: '36px'
         }}
       >
-        <span>{filterStatus}</span>
+        {filterStatus}
         <svg 
           width="12" 
           height="12" 
           viewBox="0 0 24 24" 
           fill="none" 
           stroke="currentColor" 
-          strokeWidth="2"
+          strokeWidth="2" 
           style={{ 
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)', 
             transition: 'transform 0.2s' 
           }}
         >
-          <polyline points="6,9 12,15 18,9"/>
+          <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
+      
       {open && (
         <div style={{
-          position: 'absolute', 
-          top: '100%', 
-          right: 0, 
-          marginTop: '4px', 
-          backgroundColor: '#000',
-          border: '1px solid #F5C81B', 
-          borderRadius: '6px', 
-          padding: '6px 0', 
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: '4px',
+          backgroundColor: '#1F2937',
+          border: '1px solid #F5C81B',
+          borderRadius: '6px',
+          padding: '6px 0',
           minWidth: '120px',
-          zIndex: 1000, 
-          boxShadow: '0 4px 12px rgba(245, 200, 27, 0.3)'
+          zIndex: 1000
         }}>
           {['Todos', 'Activos', 'Inactivos'].map(status => (
-            <button 
-              key={status} 
+            <button
+              key={status}
               onClick={() => { onFilterSelect(status); setOpen(false); }}
               style={{
-                width: '100%', 
-                padding: '6px 12px', 
-                backgroundColor: filterStatus === status ? '#F5C81B' : 'transparent',
-                border: 'none', 
-                color: filterStatus === status ? '#000' : '#F5C81B', 
+                width: '100%',
+                padding: '6px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#F5C81B',
                 fontSize: '13px',
-                textAlign: 'left', 
-                cursor: 'pointer', 
-                fontWeight: filterStatus === status ? '600' : '400',
-                transition: 'all 0.2s'
+                textAlign: 'left',
+                cursor: 'pointer'
               }}
-              onMouseEnter={e => filterStatus !== status && (
-                e.target.style.backgroundColor = '#F5C81B',
-                e.target.style.color = '#000'
-              )}
-              onMouseLeave={e => filterStatus !== status && (
-                e.target.style.backgroundColor = 'transparent',
-                e.target.style.color = '#F5C81B'
-              )}
             >
               {status}
             </button>
@@ -109,29 +89,66 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
 };
 
 // =============================================
-// COMPONENTE FormField (modificado para errores sin scroll)
+// COMPONENTE StatusPill
+// =============================================
+const StatusPill = React.memo(({ status }) => {
+  const isActive = status === true || status === 'true' || status === 'Activo';
+  
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: "flex-start",
+      width: "100%"
+    }}>
+      <span style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: "12px",
+        backgroundColor: isActive ? "#10B98120" : "#EF444420",
+        color: isActive ? "#10B981" : "#EF4444",
+        fontWeight: 600,
+        fontSize: "0.7rem",
+        textTransform: "capitalize",
+        border: `1px solid ${isActive ? "#10B98140" : "#EF444440"}`,
+      }}>
+        <span style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          backgroundColor: isActive ? "#10B981" : "#EF4444",
+          marginRight: 4
+        }} />
+        {isActive ? 'Activo' : 'Inactivo'}
+      </span>
+    </div>
+  );
+});
+
+StatusPill.displayName = 'StatusPill';
+
+// =============================================
+// COMPONENTE FormField
 // =============================================
 const FormField = ({ label, required, children, error, isViewMode = false, viewValue }) => {
   if (isViewMode) {
     return (
-      <div>
-        <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>
-          {label}:
-        </label>
+      <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>
+        {label}:
         <div style={{
-          padding: '6px 10px', 
-          backgroundColor: '#1e293b', 
-          border: '1px solid #334155', 
+          padding: '6px 10px',
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
           borderRadius: '6px',
           color: label === 'Estado' ? (viewValue === 'Activo' ? '#10b981' : '#ef4444') : '#f1f5f9',
-          fontSize: '13px', 
-          minHeight: '32px', 
-          display: 'flex', 
+          fontSize: '13px',
+          minHeight: '32px',
+          display: 'flex',
           alignItems: 'center'
         }}>
           {viewValue || 'N/A'}
         </div>
-      </div>
+      </label>
     );
   }
 
@@ -142,9 +159,9 @@ const FormField = ({ label, required, children, error, isViewMode = false, viewV
       </label>
       {children}
       {error && (
-        <div style={{ 
-          color: '#f87171', 
-          fontSize: '10px', 
+        <div style={{
+          color: '#f87171',
+          fontSize: '10px',
           marginTop: '2px',
           height: '14px',
           lineHeight: '14px',
@@ -169,7 +186,6 @@ const RolesPage = () => {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(7);
-
   const [currentRole, setCurrentRole] = useState({
     name: "",
     description: "",
@@ -178,11 +194,9 @@ const RolesPage = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
-
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState(null);
   const [alert, setAlert] = useState({ show: false, message: "", type: "success" });
-
   const [selectedRole, setSelectedRole] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({
     name: false,
@@ -203,7 +217,6 @@ const RolesPage = () => {
       name: !currentRole.name?.trim(),
       permissions: currentRole.permissions.length === 0 && !isAdministrador(currentRole)
     };
-    
     setFieldErrors(errors);
     return !errors.name && !errors.permissions;
   };
@@ -230,7 +243,6 @@ const RolesPage = () => {
   // ── Datos derivados
   const filteredRoles = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
-
     return roles.filter((r) => {
       if (filterStatus === "Activos" && !r.isActive) return false;
       if (filterStatus === "Inactivos" && r.isActive) return false;
@@ -259,59 +271,60 @@ const RolesPage = () => {
 
   // ── Columnas de la tabla
   const roleColumns = [
-    { 
-      header: "Rol", 
-      field: "name", 
-      width: "25%",
+    {
+      header: "Rol",
+      field: "name",
+      width: "20%",
+      align: 'left',
       render: (item) => (
-        <span style={{ 
-          color: '#fff', 
-          fontSize: '13px', 
+        <span style={{
+          color: '#fff',
+          fontSize: '13px',
           fontWeight: '500',
           display: 'block',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          textOverflow: 'ellipsis',
+          textAlign: 'left',
+          width: '100%',
+          paddingLeft: '4px'
         }}>
           {item.name || 'N/A'}
         </span>
       )
     },
-    { 
-      header: "Descripción", 
-      field: "description", 
-      width: "50%",
+    {
+      header: "Descripción",
+      field: "description",
+      width: "55%",
+      align: 'left',
+      headerStyle: {
+        paddingLeft: '34px'  // ← Alineado con el contenido (30px + 4px de padding normal)
+      },
       render: (item) => (
-        <span style={{ 
-          color: '#fff', 
+        <span style={{
+          color: '#fff',
           fontSize: '13px',
           display: 'block',
-          whiteSpace: 'normal', 
+          whiteSpace: 'normal',
           wordBreak: 'break-word',
           maxHeight: '3em',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          textAlign: 'left',
+          width: '100%',
+          paddingLeft: '30px',
+          paddingRight: '8px'
         }}>
           {item.description}
         </span>
       )
     },
-    { 
-      header: "Estado", 
+    {
+      header: "Estado",
       field: "estado",
       width: "25%",
-      render: (r) => (
-        <span style={{
-          color: r.isActive ? "#10b981" : "#ef4444",
-          fontWeight: 600,
-          fontSize: "13px",
-          display: 'block',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
-          {r.isActive ? "Activo" : "Inactivo"}
-        </span>
-      )
+      align: 'left',
+      render: (item) => <StatusPill status={item.isActive} />
     }
   ];
 
@@ -417,9 +430,8 @@ const RolesPage = () => {
     setCurrentPage(1);
   };
 
-  // ── Render permisos (MODIFICADO: 2 columnas, sin fondo azul)
+  // ── Render permisos
   const renderPermissionsColumns = (permissions, readOnly = false, isAdmin = false) => {
-    // Mostrar en 2 columnas siempre
     const numColumns = 2;
     const permissionsPerColumn = Math.ceil(availablePermissions.length / numColumns);
     
@@ -454,7 +466,7 @@ const RolesPage = () => {
                   padding: '2px 4px',
                   minHeight: '20px',
                   width: '100%',
-                  backgroundColor: 'transparent', // SIN FONDO AZUL
+                  backgroundColor: 'transparent',
                   borderRadius: '4px',
                 }}
               >
@@ -484,7 +496,6 @@ const RolesPage = () => {
                     flexShrink: 0,
                   }}
                 />
-
                 <span
                   style={{
                     color: isChecked ? '#F5C81B' : '#94a3b8',
@@ -505,7 +516,7 @@ const RolesPage = () => {
     });
   };
 
-  // ── Render modal (MODIFICADO: botones más pequeños)
+  // ── Render modal
   const renderModalContent = () => {
     const isView = modalMode === 'details';
     const isEdit = modalMode === 'edit';
@@ -601,7 +612,7 @@ const RolesPage = () => {
           <div style={{
             display: 'flex',
             gap: '16px',
-            backgroundColor: "#1a1a1a", // Fondo más oscuro
+            backgroundColor: "#1a1a1a",
             border: "1px solid #333", 
             borderRadius: "4px",
             padding: "10px",
@@ -635,7 +646,7 @@ const RolesPage = () => {
               marginTop: '4px',
               padding: '4px 8px',
               backgroundColor: 'rgba(245, 200, 27, 0.1)',
-              border: '1px solid rgba(245, 200, 27, 0.3)',
+              border: '1px solid rgba(245, 200, 27, 0.3)', 
               borderRadius: '4px',
               fontSize: '10px',
               color: '#F5C81B',
@@ -647,47 +658,66 @@ const RolesPage = () => {
           )}
         </div>
 
-        {(isCreate || isEdit) && (
+        {isCreate && (
           <div style={{ 
             display: 'flex', 
             justifyContent: 'flex-end', 
-            gap: '8px',
-            marginTop: '8px',
-            paddingTop: '8px',
-            borderTop: '1px solid #333'
+            marginTop: '8px'
           }}>
-            <button
-              onClick={closeModal}
-              style={{
-                background: 'transparent',
-                border: '1px solid #666',
-                color: '#aaa',
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                cursor: 'pointer',
-                minWidth: '70px',
-                height: '28px'
-              }}
-            >
-              Cancelar
-            </button>
             <button
               onClick={handleSave}
               style={{
                 background: '#F5C81B',
                 color: '#000',
                 border: 'none',
-                padding: '4px 12px',
+                padding: '6px 20px', 
                 borderRadius: '4px',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                minWidth: '80px',
-                height: '28px'
+                minWidth: '120px',
+                height: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f5d33c';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#F5C81B';
               }}
             >
-              {isCreate ? 'Guardar' : 'Actualizar'}
+              Registrar Rol
+            </button>
+          </div>
+        )}
+
+        {isEdit && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            marginTop: '8px'
+          }}>
+            <button
+              onClick={handleSave}
+              style={{
+                background: '#F5C81B',
+                color: '#000',
+                border: 'none',
+                padding: '6px 20px', 
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                minWidth: '120px',
+                height: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f5d33c';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#F5C81B';
+              }}
+            >
+              Guardar Cambios
             </button>
           </div>
         )}
@@ -699,13 +729,13 @@ const RolesPage = () => {
   return (
     <>
       {alert.show && (
-        <Alert 
-          message={alert.message} 
-          type={alert.type} 
-          onClose={() => setAlert({ show: false, message: '', type: 'success' })} 
+        <Alert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert({ show: false, message: '', type: 'success' })}
         />
       )}
-
+      
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column',
@@ -809,25 +839,20 @@ const RolesPage = () => {
                 tableLayout: 'fixed',
               }}
               headerStyle={{
-                padding: '10px 12px',
-                textAlign: 'left',
+                padding: '6px 4px',
+                textAlign: (col) => col.align || 'left',
                 fontWeight: '600',
-                fontSize: '12px',
+                fontSize: '11px',
                 color: '#F5C81B',
                 borderBottom: '1px solid #F5C81B',
                 backgroundColor: '#151822',
-                position: 'sticky',
-                top: 0,
-                zIndex: 1
               }}
               rowStyle={{
-                borderBottom: '1px solid #333',
+                border: 'none',
                 backgroundColor: '#000',
-                transition: 'background-color 0.2s'
-              }}
-              cellStyle={{
-                padding: '10px 12px',
-                verticalAlign: 'middle'
+                '&:hover': {
+                  backgroundColor: '#111111',
+                }
               }}
             />
           </div>
@@ -854,7 +879,7 @@ const RolesPage = () => {
                 disabled={currentPage === 1}
                 style={{
                   background: 'transparent',
-                  border: '1px solid #F5C81B',
+                  border: '1px solid #F5C81B', 
                   color: currentPage === 1 ? '#6B7280' : '#F5C81B',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -898,7 +923,7 @@ const RolesPage = () => {
         </div>
       </div>
 
-      {/* MODAL - MÁS ESTRECHO, NEGRO Y BORDE AMARILLO DELGADO */}
+      {/* MODAL */}
       <UniversalModal 
         isOpen={isModalOpen} 
         onClose={closeModal} 
@@ -966,5 +991,5 @@ const RolesPage = () => {
     </>
   );
 };
- 
+
 export default RolesPage;

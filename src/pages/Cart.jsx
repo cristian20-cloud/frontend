@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaTrash, FaMinus, FaPlus, FaShoppingCart, FaTimes, FaArrowLeft } from 'react-icons/fa';
+import { FaTrash, FaMinus, FaPlus, FaShoppingCart, FaTimes, FaArrowLeft, FaPencilAlt, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import Footer from '../components/Footer';
 import jsPDF from 'jspdf';
 
-// ✨ FACTURA MODAL MEJORADA — ESTRECHA, CON LOGO, IVA Y SCROLL
+// ✨ FACTURA MODAL MEJORADA
 const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
   if (!isOpen) return null;
-  
+
   const {
     invoiceNumber,
     date,
@@ -28,7 +28,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     doc.text("FACTURA", 105, 25, { align: 'center' });
     doc.setFontSize(12);
     doc.text(`No. INV-${invoiceNumber}`, 105, 35, { align: 'center' });
-    doc.text(`Fecha: ${date}`, 105, 42, { align: 'center' });
+    doc.text(`Fecha: ${date}`, 105, 42, { align: 'center' }); 
 
     doc.setFontSize(14);
     doc.text(businessName, 20, 60);
@@ -529,7 +529,7 @@ const CustomConfirm = ({
         >
           <FaTimes />
         </button>
-        
+
         <h3 style={{
           color: '#FFC107',
           margin: '0 0 12px 0',
@@ -695,7 +695,6 @@ const CenterAlert = ({ message, isVisible, onClose }) => {
         }}>
           ✓
         </div>
-        
         <h3 style={{
           color: '#4CAF50',
           margin: '0 0 8px 0',
@@ -743,6 +742,447 @@ const CenterAlert = ({ message, isVisible, onClose }) => {
   );
 };
 
+// ✨ MODAL DE EDICIÓN DE PRODUCTO
+const EditProductModal = ({ isOpen, onClose, product, onSave }) => {
+  const [editedProduct, setEditedProduct] = useState({
+    talla: '',
+    quantity: 1,
+    color: ''
+  });
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
+  const tallasDisponibles = ['6 7/8', '7', '7 1/8', '7 1/4', '7 3/8', '7 1/2', '7 5/8', '7 3/4'];
+
+  useEffect(() => {
+    if (product) {
+      setEditedProduct({
+        talla: product.talla || '',
+        quantity: product.quantity || 1,
+        color: product.color || ''
+      });
+    }
+  }, [product]);
+
+  const handleSave = () => {
+    if (!editedProduct.talla && tallasDisponibles.length > 0) {
+      setAlertMessage('Debes seleccionar una talla');
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 2000);
+      return;
+    }
+    onSave(product.id, editedProduct);
+    onClose();
+  };
+
+  const incrementQuantity = () => {
+    setEditedProduct({...editedProduct, quantity: editedProduct.quantity + 1});
+  };
+
+  const decrementQuantity = () => {
+    if (editedProduct.quantity > 1) {
+      setEditedProduct({...editedProduct, quantity: editedProduct.quantity - 1});
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="edit-modal-overlay" onClick={onClose}>
+      <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="edit-modal-close" onClick={onClose} type="button" aria-label="Cerrar">
+          <FaTimes size={16} />
+        </button>
+
+        <div className="edit-modal-left">
+          <div className="edit-modal-imgbox">
+            <img
+              src={product?.imagen || product?.image || 'https://via.placeholder.com/200x200/1E293B/FFC107?text=GM'}
+              alt={product?.nombre || product?.name || 'Producto'} 
+              className="edit-modal-img"
+            />
+          </div>
+        </div>
+        
+        <div className="edit-modal-right">
+          <div className="edit-modal-header-row">
+            <h2 className="edit-modal-title">
+              {product?.nombre || product?.name || 'Producto'}
+            </h2>
+            
+            <div className="edit-price-row">
+              {product?.precioOriginal && (
+                <>
+                  <span className="edit-price-strikethrough">
+                    ${Math.round(product.precioOriginal).toLocaleString()}
+                  </span>
+                  <span className="edit-price-arrow">→</span>
+                </>
+              )}
+              <span className="edit-modal-price">
+                ${Math.round(product?.precio || product?.price || 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+          
+          <div className="edit-section">
+            <div className="edit-section-label">Talla:</div>
+            <div className="edit-sizes-grid">
+              {tallasDisponibles.map((talla) => (
+                <button
+                  key={talla}
+                  type="button"
+                  className={`edit-size-chip ${editedProduct.talla === talla ? 'selected' : ''}`}
+                  onClick={() => setEditedProduct({...editedProduct, talla})}
+                >
+                  {talla}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="edit-section">
+            <div className="edit-section-label">Cantidad:</div>
+            <div className="edit-quantity-control">
+              <button
+                className="edit-qty-btn"
+                onClick={decrementQuantity}
+                disabled={editedProduct.quantity <= 1}
+                type="button"
+              >
+                <FaMinus size={10} />
+              </button>
+              <span className="edit-qty-value">{editedProduct.quantity}</span>
+              <button
+                className="edit-qty-btn"
+                onClick={incrementQuantity}
+                type="button"
+              >
+                <FaPlus size={10} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="edit-section">
+            <div className="edit-section-label">Color (opcional):</div>
+            <input
+              type="text"
+              value={editedProduct.color}
+              onChange={(e) => setEditedProduct({...editedProduct, color: e.target.value})}
+              className="edit-color-input"
+              placeholder="Ej: Rojo, Azul, Negro..."
+            />
+          </div>
+          
+          {showAlert && (
+            <div className="edit-alert">
+              <FaExclamationCircle size={14} />
+              <span>{alertMessage}</span>
+            </div>
+          )}
+          
+          <div className="edit-modal-buttons">
+            <button className="edit-btn-save" onClick={handleSave}>Guardar Cambios</button>
+            <button className="edit-btn-cancel" onClick={onClose}>Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .edit-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          padding: 15px;
+        }
+        
+        .edit-modal {
+          position: relative;
+          width: min(750px, 95%);
+          background: #030712;
+          border: 1px solid #FFC107;
+          border-radius: 12px;
+          display: flex;
+          gap: 12px;
+          padding: 12px;
+          box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+        }
+        
+        .edit-modal-close {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(0,0,0,0.5);
+          color: #fff;
+          cursor: pointer;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+         
+        .edit-modal-close:hover {
+          background: rgba(255,193,7,0.2);
+          color: #FFC107;
+        }
+        
+        .edit-modal-left {
+          flex: 0 0 40%;
+          min-width: 250px;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        
+        .edit-modal-imgbox {
+          width: 100%;
+          height: 100%;
+          min-height: 220px;
+          background: #000;
+          border-radius: 8px;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(255,193,7,0.3);
+        }
+        
+        .edit-modal-img {
+          width: 100%;
+          height: 100%;
+          objectFit: contain;
+        }
+        
+        .edit-modal-right {
+          flex: 1;
+          display: flex;
+          flex-direction: column; 
+          gap: 12px;
+          padding: 5px;
+        }
+        
+        .edit-modal-header-row {
+          margin-bottom: 5px;
+        }
+        
+        .edit-modal-title {
+          margin: 0 0 5px 0;
+          font-size: 1.2rem;
+          font-weight: 500;
+          color: #fff;
+        }
+        
+        .edit-price-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flexWrap: wrap;
+        }
+         
+        .edit-price-strikethrough {
+          color: rgba(255,255,255,0.5);
+          text-decoration: line-through;
+          font-size: 0.9rem;
+        }
+        
+        .edit-price-arrow {
+          color: #FFC107;
+          font-size: 0.9rem;
+          font-weight: 700;
+        }
+        
+        .edit-modal-price {
+          color: #FFC107;
+          font-weight: 700;
+          font-size: 1.2rem;
+        }
+        
+         .edit-section {
+          margin-bottom: 5px;
+        }
+        
+        .edit-section-label {
+          font-weight: 400;
+          color: #ccc;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+        }
+         
+        .edit-sizes-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        
+        .edit-size-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid #2A4A6F;
+          background: transparent;
+          color: #fff;
+          font-weight: 400;
+          font-size: 0.8rem;
+          min-width: 45px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .edit-size-chip:hover {
+          border-color: #FFC107;
+          color: #FFC107;
+        }
+        
+        .edit-size-chip.selected {
+          border-color: #FFC107;
+          color: #FFC107;
+          background: rgba(255,193,7,0.1);
+        }
+        
+        .edit-quantity-control {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          border: 1px solid #2A4A6F;
+          border-radius: 25px;
+          padding: 4px 10px;
+          background: rgba(0,0,0,0.3);
+        }
+        
+        .edit-qty-btn {
+          width: 24px;
+          height: 24px;
+          border: none;
+          background: rgba(42,74,111,0.3);
+          color: #fff;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+        }
+        
+        .edit-qty-btn:hover:not(:disabled) {
+          background: rgba(42,74,111,0.8);
+        }
+        
+        .edit-qty-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+        
+        .edit-qty-value {
+          min-width: 25px;
+          text-align: center;
+          font-weight: 500;
+          font-size: 0.95rem;
+          color: #fff;
+        }
+        
+        .edit-color-input {
+          width: 100%;
+          padding: 8px 10px;
+          background: #1E293B;
+          border: 1px solid #2A4A6F;
+          border-radius: 6px;
+          color: white;
+          font-size: 0.85rem;
+        }
+        
+        .edit-color-input:focus {
+          outline: none;
+          border-color: #FFC107;
+        }
+        
+        .edit-color-input::placeholder {
+          color: #64748b;
+        }
+        
+        .edit-alert {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 10px;
+          background: rgba(239,68,68,0.15);
+          border: 1px solid #ef4444;
+          border-radius: 6px;
+          color: #ef4444;
+          font-size: 0.8rem;
+          margin: 5px 0;
+        }
+        
+        .edit-modal-buttons {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+        
+        .edit-btn-save {
+          flex: 2;
+          height: 38px;
+          padding: 0 12px;
+          border-radius: 6px;
+          border: 1.5px solid #FFC107;
+          background: #FFC107;
+          color: #000;
+          font-weight: 600;
+          font-size: 0.85rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .edit-btn-save:hover {
+          background: transparent;
+          color: #FFC107;
+        }
+        
+        .edit-btn-cancel {
+          flex: 1;
+          height: 38px;
+          padding: 0 10px;
+          border-radius: 6px;
+          border: 1px solid #666;
+          background: transparent;
+          color: #CBD5E1;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .edit-btn-cancel:hover {
+          border-color: #FFC107;
+          color: #FFC107;
+        }
+        
+        @media (max-width: 650px) {
+          .edit-modal {
+            flex-direction: column;
+            padding: 10px;
+          }
+          .edit-modal-left {
+            min-width: auto;
+            width: 100%;
+          }
+          .edit-modal-imgbox {
+            min-height: 180px;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 // ✨ COMPONENTE PRINCIPAL
 const Cart = ({ cartItems = [], updateCart, user }) => {
   const [centerAlert, setCenterAlert] = useState({ visible: false, message: '' });
@@ -754,7 +1194,9 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [showConfirmPurchase, setShowConfirmPurchase] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
-  
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
+
   const navigate = useNavigate();
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
@@ -784,6 +1226,27 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
     updateCart(newCart);
   };
 
+  const handleEditProduct = (product) => {
+    setProductToEdit(product);
+    setShowEditModal(true);
+  };
+
+  const handleSaveProduct = (productId, editedData) => {
+    const newCart = safeCartItems.map(item => {
+      if (item.id === productId) {
+        return {
+          ...item,
+          color: editedData.color,
+          talla: editedData.talla,
+          quantity: editedData.quantity
+        };
+      }
+      return item;
+    });
+    updateCart(newCart);
+    setCenterAlert({ visible: true, message: 'Producto actualizado con éxito' });
+  };
+
   const handleClearCart = () => setShowClearConfirm(true);
 
   const confirmClearCart = () => {
@@ -794,12 +1257,12 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
 
   const calculateTotals = () => {
     if (safeCartItems.length === 0) return { subtotal: 0, total: 0, tax: 0 };
-    
+
     const subtotal = safeCartItems.reduce((sum, item) => {
       const precio = Number(item.precio ?? item.price ?? item.originalPrice ?? 0);
       return sum + (precio * (item.quantity || 1));
     }, 0);
-    
+
     const tax = Math.round(subtotal * 0.19);
     return { subtotal, tax, total: subtotal + tax };
   };
@@ -833,7 +1296,7 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
   const confirmPurchase = () => {
     setIsProcessing(true);
     setShowConfirmPurchase(false);
-    
+
     setTimeout(() => {
       setIsProcessing(false);
 
@@ -866,7 +1329,6 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
     setCenterAlert({ visible: true, message: '¡Compra realizada con éxito!' });
   };
 
-  // Renderizado: Carrito vacío
   if (safeCartItems.length === 0) {
     return (
       <div style={{
@@ -884,7 +1346,6 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
           position: "relative",
           overflow: "hidden"
         }}>
-          {/* ✅ CORREGIDO: Era #FFFF (blanco), ahora es #031326 */}
           <div style={{ position: "absolute", top: "-40px", left: 0, width: "100%", height: "80px", background: "#031326" }} />
           <h1 style={{ color: "white", fontSize: "3rem", fontWeight: "700", marginBottom: "20px" }}>🛒 Carrito de Compras</h1>
           <p style={{ color: "#cbd5e1", fontSize: "1.2rem", maxWidth: "900px", margin: "0 auto", lineHeight: "1.6" }}>
@@ -966,7 +1427,6 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
     );
   }
 
-  // Renderizado: Carrito con productos
   return (
     <div style={{
       background: '#030712',
@@ -974,17 +1434,17 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <CustomConfirm 
-        isOpen={showClearConfirm} 
-        onConfirm={confirmClearCart} 
-        onCancel={() => setShowClearConfirm(false)} 
-        title="¿Vaciar carrito?" 
-        message="¿Estás seguro que deseas eliminar todos los productos del carrito? Esta acción no se puede deshacer." 
-        confirmText="Vaciar Carrito" 
-        cancelText="Cancelar" 
-        type="warning" 
+      <CustomConfirm
+        isOpen={showClearConfirm}
+        onConfirm={confirmClearCart}
+        onCancel={() => setShowClearConfirm(false)}
+        title="¿Vaciar carrito?"
+        message="¿Estás seguro que deseas eliminar todos los productos del carrito? Esta acción no se puede deshacer."
+        confirmText="Vaciar Carrito"
+        cancelText="Cancelar"
+        type="warning"
       />
-      
+
       <CustomConfirm 
         isOpen={showDeleteConfirm} 
         onConfirm={confirmRemoveFromCart} 
@@ -1026,6 +1486,13 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
         />
       )}
 
+      <EditProductModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        product={productToEdit}
+        onSave={handleSaveProduct}
+      />
+
       <section style={{ 
         background: "#031326", 
         padding: "100px 20px 70px", 
@@ -1035,7 +1502,6 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
         position: "relative", 
         overflow: "hidden" 
       }}>
-        {/* ✅ CORREGIDO: Era #FFFF (blanco), ahora es #031326 */}
         <div style={{ position: "absolute", top: "-40px", left: 0, width: "100%", height: "80px", background: "#031326" }} />
         <h1 style={{ color: "white", fontSize: "3rem", fontWeight: "700", marginBottom: "20px" }}>
           🛒 Carrito de Compras
@@ -1047,21 +1513,83 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
       </section>
 
       <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        overflow: 'hidden' 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#030712'
       }}>
         <div style={{ 
-          padding: '40px 20px 20px', 
+          padding: '30px 20px 20px', 
           maxWidth: '1200px', 
           margin: '0 auto', 
-          width: '100%', 
-          display: 'flex', 
-          flexDirection: 'column',
-          overflowY: 'auto', 
-          flex: 1
+          width: '100%'
         }}>
+          {/* Header con título y botones - BOTONES MÁS JUNTOS */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '25px',
+            flexWrap: 'wrap'
+          }}>
+            <h2 style={{ color: '#FFC107', fontSize: '20px', margin: 0, fontWeight: 'bold' }}>
+              Productos seleccionados ({safeCartItems.length})
+            </h2>
+            
+            {/* Botones más juntos - gap reducido */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link
+                to="/"
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #FFC107',
+                  borderRadius: '20px',
+                  fontWeight: '400',
+                  textAlign: 'center',
+                  color: '#FFC107',
+                  textDecoration: 'none',
+                  fontSize: '12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 193, 7, 0.1)'}
+                onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+              >
+                <FaArrowLeft style={{ fontSize: '10px' }} /> Seguir Comprando
+              </Link>
+              
+              <button 
+                onClick={handleClearCart} 
+                style={{ 
+                  background: 'transparent', 
+                  border: '1px solid #ff4d4d', 
+                  color: '#ff4d4d', 
+                  cursor: 'pointer', 
+                  padding: '6px 12px', 
+                  borderRadius: '20px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '5px', 
+                  fontSize: '12px', 
+                  fontWeight: '400',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = 'rgba(255, 77, 77, 0.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                }}
+              >
+                <FaTrash style={{ fontSize: '10px' }} /> Vaciar carrito
+              </button>
+            </div>
+          </div>
+
           <div style={{ 
             display: 'flex', 
             gap: '20px', 
@@ -1069,30 +1597,6 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
             justifyContent: 'center'
           }}>
             <div style={{ flex: 1, minWidth: '300px', maxWidth: '700px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h2 style={{ color: '#FFC107', fontSize: '16px', margin: 0 }}>
-                  Productos seleccionados ({safeCartItems.length})
-                </h2>
-                <button 
-                  onClick={handleClearCart} 
-                  style={{ 
-                    background: 'transparent', 
-                    border: '1px solid #ff4d4d', 
-                    color: '#ff4d4d', 
-                    cursor: 'pointer', 
-                    padding: '6px 12px', 
-                    borderRadius: '6px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '5px', 
-                    fontSize: '12px', 
-                    fontWeight: 'bold' 
-                  }}
-                >
-                  <FaTrash /> Vaciar carrito
-                </button>
-              </div>
-
               {safeCartItems.map((item, index) => {
                 const precio = getProductPrice(item);
                 const quantity = item.quantity || 1;
@@ -1105,11 +1609,11 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
                     style={{ 
                       backgroundColor: '#0f172a', 
                       border: '1px solid rgba(255, 193, 7, 0.4)', 
-                      padding: '12px', 
+                      padding: '15px', 
                       borderRadius: '10px', 
                       display: 'flex', 
                       alignItems: 'flex-start', 
-                      gap: '12px', 
+                      gap: '15px',  
                       marginBottom: '12px' 
                     }}
                   >
@@ -1117,43 +1621,39 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
                       src={getImageUrl(item)} 
                       alt={productName} 
                       style={{ 
-                        width: '80px', 
-                        height: '80px', 
-                        borderRadius: '6px', 
+                        width: '90px', 
+                        height: '90px', 
+                        borderRadius: '8px', 
                         objectFit: 'cover', 
                         border: '1px solid #FFC107' 
                       }} 
                       onError={handleImageError} 
                     />
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ margin: '0 0 5px 0', color: '#FFC107', fontSize: '14px', fontWeight: 'bold' }}>
+                      <h3 style={{ margin: '0 0 8px 0', color: '#FFC107', fontSize: '16px', fontWeight: 'bold' }}>
                         {productName}
                       </h3>
-                      <div style={{ display: 'flex', gap: '5px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '10px', color: '#CBD5E1', backgroundColor: 'rgba(30, 41, 59, 0.7)', padding: '2px 6px', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: '#CBD5E1', backgroundColor: 'rgba(30, 41, 59, 0.7)', padding: '3px 8px', borderRadius: '8px' }}>
                           {getProductCategory(item)}
                         </span>
-                        {item.color && (
-                          <span style={{ fontSize: '10px', color: '#CBD5E1', backgroundColor: 'rgba(30, 41, 59, 0.7)', padding: '2px 6px', borderRadius: '8px' }}>
-                            Color: {item.color}
-                          </span>
-                        )}
                         {item.talla && (
-                          <span style={{ fontSize: '10px', color: '#CBD5E1', backgroundColor: 'rgba(30, 41, 59, 0.7)', padding: '2px 6px', borderRadius: '8px' }}>
+                          <span style={{ fontSize: '11px', color: '#CBD5E1', backgroundColor: 'rgba(30, 41, 59, 0.7)', padding: '3px 8px', borderRadius: '8px' }}>
                             Talla: {item.talla}
                           </span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', color: '#ccc' }}>Cantidad:</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '5px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '12px', color: '#ccc' }}>Cantidad:</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button 
                               onClick={() => updateQuantity(item.id, -1)} 
                               style={{ 
-                                width: '22px', 
-                                height: '22px', 
-                                borderRadius: '4px', 
+                                width: '26px', 
+                                height: '26px', 
+                                borderRadius: '5px', 
                                 backgroundColor: 'transparent', 
                                 border: '1px solid #FFC107', 
                                 color: '#FFC107', 
@@ -1161,20 +1661,23 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center', 
-                                fontSize: '10px' 
+                                fontSize: '11px',
+                                transition: 'all 0.3s ease'
                               }}
+                              onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 193, 7, 0.1)'}
+                              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                             >
                               <FaMinus />
                             </button>
-                            <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '13px', color: '#FFFFFF', fontWeight: 'bold' }}>
+                            <span style={{ minWidth: '25px', textAlign: 'center', fontSize: '14px', color: '#FFFFFF', fontWeight: 'bold' }}>
                               {quantity}
                             </span>
                             <button 
                               onClick={() => updateQuantity(item.id, 1)} 
                               style={{ 
-                                width: '22px', 
-                                height: '22px', 
-                                borderRadius: '4px', 
+                                width: '26px', 
+                                height: '26px', 
+                                borderRadius: '5px', 
                                 backgroundColor: 'transparent', 
                                 border: '1px solid #FFC107', 
                                 color: '#FFC107', 
@@ -1182,72 +1685,117 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center', 
-                                fontSize: '10px' 
+                                fontSize: '11px',
+                                transition: 'all 0.3s ease'
                               }}
+                              onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 193, 7, 0.1)'}
+                              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                             >
                               <FaPlus />
                             </button>
                           </div>
                         </div>
+                        
                         <div style={{ textAlign: 'right' }}>
-                          <p style={{ color: '#FFC107', fontWeight: 'bold', margin: '0 0 2px 0', fontSize: '12px' }}>
+                          <div style={{ color: '#CBD5E1', fontSize: '12px', marginBottom: '2px' }}>
                             ${precio.toLocaleString()} c/u
-                          </p>
-                          <p style={{ color: '#FFC107', fontWeight: 'bold', margin: 0, fontSize: '14px' }}>
+                          </div>
+                          <div style={{ color: '#FFC107', fontWeight: 'bold', fontSize: '16px' }}>
                             ${itemTotal.toLocaleString()}
-                          </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleRemoveFromCart(item.id, productName)} 
-                      style={{ 
-                        background: 'transparent', 
-                        border: '1px solid #ff4d4d', 
-                        color: '#ff4d4d', 
-                        cursor: 'pointer', 
-                        padding: '5px 8px', 
-                        borderRadius: '4px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '3px', 
-                        fontSize: '11px', 
-                        fontWeight: 'bold', 
-                        transition: 'all 0.3s ease', 
-                        alignSelf: 'flex-start' 
-                      }} 
-                      onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 77, 77, 0.1)'} 
-                      onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-                    >
-                      <FaTrash />
-                    </button>
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => handleEditProduct(item)} 
+                        style={{ 
+                          background: 'transparent', 
+                          border: '1px solid #FFC107', 
+                          color: '#FFC107', 
+                          cursor: 'pointer', 
+                          padding: '6px 10px', 
+                          borderRadius: '5px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '5px', 
+                          fontSize: '12px', 
+                          fontWeight: 'bold', 
+                          transition: 'all 0.3s ease'
+                        }} 
+                        onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 193, 7, 0.1)'} 
+                        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                      >
+                        <FaPencilAlt />
+                      </button>
+                      
+                      <button 
+                        onClick={() => handleRemoveFromCart(item.id, productName)} 
+                        style={{ 
+                          background: 'transparent', 
+                          border: '1px solid #ff4d4d', 
+                          color: '#ff4d4d', 
+                          cursor: 'pointer', 
+                          padding: '6px 10px', 
+                          borderRadius: '5px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '5px', 
+                          fontSize: '12px', 
+                          fontWeight: 'bold', 
+                          transition: 'all 0.3s ease'
+                        }} 
+                        onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 77, 77, 0.1)'} 
+                        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
+            {/* Columna derecha - Resumen CON PRODUCTOS Y TOTALES */}
             <div style={{ width: '320px', minWidth: '320px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ 
                 backgroundColor: '#0f172a', 
                 border: '1px solid rgba(255, 193, 7, 0.4)', 
-                padding: '15px', 
-                borderRadius: '10px', 
+                padding: '20px', 
+                borderRadius: '12px', 
                 display: 'flex', 
-                flexDirection: 'column', 
-                height: 'fit-content' 
+                flexDirection: 'column',
+                position: 'sticky',
+                top: '20px'
               }}>
-                <h2 style={{ color: '#FFC107', margin: '0 0 12px 0', textAlign: 'center', fontSize: '15px', fontWeight: 'bold' }}>
+                <h2 style={{ color: '#FFC107', margin: '0 0 15px 0', textAlign: 'center', fontSize: '18px', fontWeight: 'bold' }}>
                   Resumen del Pedido
                 </h2>
                 
-                <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid rgba(255, 193, 7, 0.2)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: '#ccc', fontSize: '11px' }}>Productos:</span>
-                    <span style={{ color: '#FFFFFF', fontSize: '11px' }}>{safeCartItems.length} items</span>
+                {/* Lista de productos en el resumen */}
+                <div style={{ marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid rgba(255, 193, 7, 0.2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#ccc', fontSize: '13px' }}>Productos:</span>
+                    <span style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: 'bold' }}>{safeCartItems.length} items</span>
                   </div>
-                  {safeCartItems.slice(0, 3).map((item, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '10px', color: '#CBD5E1' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px', paddingRight: '5px' }}>
+                  
+                  {safeCartItems.map((item, index) => (
+                    <div key={index} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      marginBottom: '6px', 
+                      fontSize: '12px', 
+                      color: '#CBD5E1',
+                      padding: '4px 0'
+                    }}>
+                      <span style={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap', 
+                        maxWidth: '160px', 
+                        paddingRight: '5px' 
+                      }}>
                         • {getProductName(item)} x{item.quantity || 1}
                       </span>
                       <span style={{ color: '#FFC107', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
@@ -1255,96 +1803,66 @@ const Cart = ({ cartItems = [], updateCart, user }) => {
                       </span>
                     </div>
                   ))}
-                  {safeCartItems.length > 3 && (
-                    <div style={{ fontSize: '10px', color: '#CBD5E1', textAlign: 'center', marginTop: '3px' }}>
-                      Y {safeCartItems.length - 3} productos más...
-                    </div>
-                  )}
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
-                  <span style={{ color: '#ccc' }}>Subtotal:</span>
-                  <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>${subtotal.toLocaleString()}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
-                  <span style={{ color: '#ccc' }}>IVA (19%):</span>
-                  <span style={{ color: '#FFC107', fontWeight: 'bold' }}>${tax.toLocaleString()}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
-                  <span style={{ color: '#ccc' }}>Envío:</span>
-                  <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>GRATIS</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(255, 193, 7, 0.2)', fontSize: '14px' }}>
-                  <strong style={{ color: '#FFC107' }}>Total:</strong>
-                  <strong style={{ color: '#FFC107', fontSize: '16px' }}>${total.toLocaleString()}</strong>
+                {/* Totales */}
+                <div style={{ 
+                  backgroundColor: 'rgba(255, 193, 7, 0.05)', 
+                  padding: '12px', 
+                  borderRadius: '8px',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                    <span style={{ color: '#ccc' }}>Subtotal:</span>
+                    <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>${subtotal.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                    <span style={{ color: '#ccc' }}>IVA (19%):</span>
+                    <span style={{ color: '#FFC107', fontWeight: 'bold' }}>${tax.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                    <span style={{ color: '#ccc' }}>Envío:</span>
+                    <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>GRATIS</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(255, 193, 7, 0.2)', fontSize: '16px' }}>
+                    <strong style={{ color: '#FFC107' }}>Total:</strong>
+                    <strong style={{ color: '#FFC107', fontSize: '18px' }}>${total.toLocaleString()}</strong>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
-                  <button
-                    onClick={handleFinishPurchase}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: '#FFC107',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      color: '#000',
-                      transition: 'all 0.3s ease',
-                      whiteSpace: 'nowrap'
-                    }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = '#FFD700'}
-                    onMouseOut={(e) => e.target.style.backgroundColor = '#FFC107'}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? 'Procesando...' : 'Finalizar Compra'}
-                  </button>
-                </div>
+                <button
+                  onClick={handleFinishPurchase}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#FFC107',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    color: '#000',
+                    transition: 'all 0.3s ease',
+                    letterSpacing: '0.5px'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#FFD700'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#FFC107'}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Procesando...' : 'Comprar'}
+                </button>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '20px 0',
-          backgroundColor: '#030712'
-        }}>
-          <Link
-            to="/"
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: '1px solid #FFC107',
-              borderRadius: '6px',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              color: '#FFC107',
-              textDecoration: 'none',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.3s ease',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 193, 7, 0.1)'}
-            onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-          >
-            <FaArrowLeft style={{ fontSize: '12px' }} /> Seguir Comprando
-          </Link>
-        </div>
-
-        <div style={{ 
-          marginTop: 'auto',
-          paddingTop: '20px',
-          paddingBottom: '20px'
-        }}>
-          <Footer />
-        </div>
+      <div style={{ 
+        marginTop: 'auto',
+        backgroundColor: '#030712',
+        borderTop: '1px solid rgba(255, 193, 7, 0.1)'
+      }}>
+        <Footer />
       </div>
     </div>
   );

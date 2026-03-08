@@ -1,6 +1,6 @@
 // src/components/Header.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   FaShoppingCart, FaUser, FaSearch, FaTimes, FaTrash,
   FaHome, FaTags, FaFire, FaSignInAlt, FaPlus, FaMinus, FaBars,
@@ -14,19 +14,27 @@ const Header = ({
   onLogout,
   cartItemCount,
   cartItems = [],
-  updateCart
+  updateCart,
+  searchTerm = '',
+  onSearch,
+  onClearSearch
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [localCartCount, setLocalCartCount] = useState(cartItemCount || 0);
   const userMenuRef = useRef(null);
   const userButtonRef = useRef(null);
-  const navigate = useNavigate();
   const cartRef = useRef(null);
   const cartScrollRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+
+  // Sincronizar el término de búsqueda local con el de las props
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
 
   /* ✅ ACTUALIZAR CONTADOR CUANDO CAMBIE cartItemCount */
   useEffect(() => {
@@ -100,7 +108,7 @@ const Header = ({
     };
   }, [isMenuOpen, isCartOpen]);
 
-  /* CARRITO - FUNCIONES CORREGIDAS */
+  /* CARRITO - FUNCIONES */
   const removeFromCart = (id) => {
     const updated = cartItems.filter(i => i.id !== id);
     updateCart(updated);
@@ -129,7 +137,7 @@ const Header = ({
         }
         return i;
       })
-      .filter(i => i);
+      .filter(Boolean);
     updateCart(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
     const total = updated.reduce((acc, item) => acc + (item.quantity || 0), 0);
@@ -178,14 +186,46 @@ const Header = ({
     }, 0);
   };
 
-  /* BUSQUEDA CORREGIDA */
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      setIsMenuOpen(false);
-      navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
+  /* BUSQUEDA EN TIEMPO REAL - SIN BOTÓN DE PRODUCTO */
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setLocalSearchTerm(value);
+    
+    // Limpiar timeout anterior
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Ejecutar búsqueda después de 300ms de inactividad
+    if (value.trim() !== '') {
+      searchTimeoutRef.current = setTimeout(() => {
+        if (onSearch) {
+          onSearch(value);
+        }
+      }, 300);
+    } else {
+      // Si está vacío, limpiar búsqueda inmediatamente
+      if (onClearSearch) {
+        onClearSearch();
+      }
     }
   };
+
+  const handleClearClick = () => {
+    setLocalSearchTerm('');
+    if (onClearSearch) {
+      onClearSearch();
+    }
+  };
+
+  // Limpiar timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleImageError = (e) => {
     e.target.src = 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM';
@@ -193,25 +233,25 @@ const Header = ({
 
   return (
     <>
-      {/* ✅ CORREGIDO: responsiveStyles dentro de <style> */}
-      <style>{responsiveStyles}
-        {/* OVERLAY PARA MENÚ MÓVIL */}
-        {isMenuOpen && (
-          <div
-            className="mobile-menu-overlay"
-            onClick={() => setIsMenuOpen(false)}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.85)',
-              zIndex: 998,
-            }}
-          />
-        )}
-      </style>
+      {/* ESTILOS RESPONSIVE */}
+      <style>{responsiveStyles}</style>
+
+      {/* OVERLAY PARA MENÚ MÓVIL */}
+      {isMenuOpen && (
+        <div
+          className="mobile-menu-overlay"
+          onClick={() => setIsMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 998,
+          }}
+        />
+      )}
 
       <header style={headerContainer}>
         <div style={headerInner}>
@@ -244,19 +284,32 @@ const Header = ({
               <FaFire size={14} /> <span>Ofertas</span>
             </Link>
 
-            {/* BUSCADOR DESKTOP - CORREGIDO */}
-            <form className="header-search" onSubmit={handleSearchSubmit} style={searchForm}>
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar gorras..."
-                style={searchInput}
-                aria-label="Buscar productos"
-              />
-              <button type="submit" style={searchButton} aria-label="Buscar">
-                <FaSearch />
-              </button>
-            </form>
+           
+            {/* BUSCADOR DESKTOP - EN TIEMPO REAL */}
+            <div className="header-search" style={searchContainer}>
+              <div style={searchForm}>
+                <input
+                  value={localSearchTerm}
+                  onChange={handleSearchChange}
+                  placeholder="Buscar..."
+                  style={searchInput}
+                  aria-label="Buscar productos"
+                />
+                {localSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={handleClearClick}
+                    style={clearSearchButton}
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <FaTimes size={10} />
+                  </button>
+                )}
+                <span style={searchIcon}>
+                  <FaSearch size={12} />
+                </span>
+              </div>
+            </div>
 
             {/* CARRITO */}
             <div style={{ position: "relative" }} ref={cartRef}>
@@ -430,25 +483,12 @@ const Header = ({
           {/* ENCABEZADO DEL MENÚ MÓVIL */}
           <div style={mobileHeader}>
             <div style={mobileUserInfo}>
-              {user ? (
-                <>
-                  <div style={mobileAvatar}>
-                    <FaUser size={20} />
-                  </div>
-                  <div>
-                    <p style={mobileUserName}>{user.nombre || user.email}</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={mobileAvatar}>
-                    <FaUser size={20} />
-                  </div>
-                  <div>
-                    <p style={mobileUserName}>Bienvenido</p>
-                  </div>
-                </>
-              )}
+              <div style={mobileAvatar}>
+                <FaUser size={20} />
+              </div>
+              <div>
+                <p style={mobileUserName}>{user ? (user.nombre || user.email) : 'Bienvenido'}</p>
+              </div>
             </div>
           
             <button 
@@ -460,20 +500,30 @@ const Header = ({
             </button>
           </div>
 
-          {/* BUSCADOR MÓVIL - CORREGIDO */}
+          {/* BUSCADOR MÓVIL - EN TIEMPO REAL */}
           <div style={searchMobileContainer}>
-            <form onSubmit={handleSearchSubmit} style={searchMobileForm}>
+            <div style={searchMobileForm}>
               <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={localSearchTerm}
+                onChange={handleSearchChange}
                 placeholder="Buscar..."
                 style={searchMobileInput}
                 aria-label="Buscar en móvil"
               />
-              <button type="submit" style={searchMobileButton} aria-label="Buscar">
+              {localSearchTerm && (
+                <button
+                  type="button"
+                  onClick={handleClearClick}
+                  style={clearSearchMobileButton}
+                  aria-label="Limpiar búsqueda"
+                >
+                  <FaTimes size={12} />
+                </button>
+              )}
+              <span style={searchMobileIcon}>
                 <FaSearch size={16} />
-              </button>
-            </form>
+              </span>
+            </div>
           </div>
 
           {/* NAVEGACIÓN MÓVIL */}
@@ -506,6 +556,16 @@ const Header = ({
             >
               <FaFire size={16} style={mobileNavIcon} /> 
               <span>Ofertas</span>
+            </Link>
+          
+            <Link 
+              to="/productos" 
+              className="mobile-menu-link" 
+              onClick={() => setIsMenuOpen(false)}
+              style={mobileNavItem}
+            >
+              <FaTags size={16} style={mobileNavIcon} /> 
+              <span>Productos</span>
             </Link>
           
             <Link 
@@ -636,6 +696,13 @@ const navLink = {
   }
 };
 
+// NUEVOS ESTILOS PARA BUSCADOR SIN FORM
+const searchContainer = {
+  position: "relative",
+  display: "flex",
+  alignItems: "center"
+};
+
 const searchForm = {
   position: "relative",
   display: "flex",
@@ -643,30 +710,94 @@ const searchForm = {
 };
 
 const searchInput = {
-  padding: "8px 35px 8px 12px",
+  padding: "4px 30px 4px 10px",
   borderRadius: "20px",
   border: "1px solid rgba(255,255,255,0.3)",
   backgroundColor: "rgba(255,255,255,0.1)",
   color: "white",
   width: "180px",
-  fontSize: "14px",
+  fontSize: "13px",
+  height: "28px",
+  outline: "none",
+  transition: "all 0.2s ease",
   ":focus": {
-    outline: "none",
-    borderColor: "#FFC107"
+    borderColor: "#FFC107",
+    backgroundColor: "rgba(255,255,255,0.15)"
   }
 };
 
-const searchButton = {
+const searchIcon = {
   position: "absolute",
   right: "8px",
   top: "50%",
   transform: "translateY(-50%)",
-  background: "none",
+  color: "rgba(255,255,255,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  pointerEvents: "none"
+};
+
+const clearSearchButton = {
+  position: "absolute",
+  right: "30px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "rgba(255,255,255,0.1)",
   border: "none",
   color: "white",
   cursor: "pointer",
-  fontSize: "14px",
-  padding: "4px"
+  fontSize: "10px",
+  padding: "3px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "50%",
+  width: "16px",
+  height: "16px",
+  transition: "all 0.2s ease",
+  zIndex: 2,
+  ":hover": {
+    backgroundColor: "rgba(255, 193, 7, 0.8)",
+    color: "#000"
+  }
+};
+
+const clearSearchMobileButton = {
+  position: "absolute",
+  right: "40px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "rgba(255,255,255,0.1)",
+  border: "none",
+  color: "white",
+  cursor: "pointer",
+  fontSize: "10px",
+  padding: "4px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "50%",
+  width: "18px",
+  height: "18px",
+  transition: "all 0.2s ease",
+  zIndex: 2,
+  ":hover": {
+    backgroundColor: "rgba(255, 193, 7, 0.8)",
+    color: "#000"
+  }
+};
+
+const searchMobileIcon = {
+  position: "absolute",
+  right: "12px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  color: "rgba(255,255,255,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  pointerEvents: "none"
 };
 
 const iconButton = {
@@ -699,7 +830,7 @@ const badgeCount = {
   justifyContent: "center"
 };
 
-/* CARRITO COMPACTO - CAMBIADO DE #001428 A NEGRO (#000) */
+/* CARRITO COMPACTO */
 const cartPanel = {
   position: "absolute",
   top: "100%",
@@ -966,7 +1097,7 @@ const loginButton = {
   }
 };
 
-/* MENÚ MÓVIL LATERAL - CAMBIADO DE #001428 A NEGRO (#000) */
+/* MENÚ MÓVIL LATERAL */
 const mobileMenu = {
   position: "fixed",
   top: 0,
@@ -1026,36 +1157,31 @@ const mobileCloseBtn = {
 const searchMobileContainer = {
   padding: "15px",
   backgroundColor: "#000",
-  borderBottom: "1px solid #FFC107"
+  borderBottom: "1px solid #FFC107",
+  position: "relative"
 };
 
 const searchMobileForm = {
+  position: "relative",
   display: "flex",
-  gap: "8px"
+  alignItems: "center"
 };
 
 const searchMobileInput = {
-  flex: 1,
-  padding: "8px 12px",
-  borderRadius: "6px",
+  width: "100%",
+  padding: "8px 40px 8px 12px",
+  borderRadius: "20px",
   border: "1px solid rgba(255, 193, 7, 0.3)",
   backgroundColor: "rgba(255, 255, 255, 0.1)",
   color: "white",
   fontSize: "14px",
+  height: "36px",
+  outline: "none",
+  transition: "all 0.2s ease",
   ":focus": {
-    outline: "none",
-    borderColor: "#FFC107"
+    borderColor: "#FFC107",
+    backgroundColor: "rgba(255,255,255,0.15)"
   }
-};
-
-const searchMobileButton = {
-  backgroundColor: "#FFC107",
-  color: "#000",
-  border: "none",
-  borderRadius: "6px",
-  padding: "8px 12px",
-  cursor: "pointer",
-  fontWeight: "bold"
 };
 
 const mobileNav = {
@@ -1155,6 +1281,6 @@ const logoutMobileBtn = {
 };
 
 /* ESTILOS RESPONSIVE */
-const responsiveStyles = `/* Responsive para móviles (0-768px) */ @media (max-width: 768px) { .header-nav { display: none !important; } .header-menu-btn { display: block !important; } /* Carrito en móvil - más compacto */ .cart-panel-responsive { position: fixed !important; top: 60px !important; right: 0 !important; left: 0 !important; width: 100vw !important; max-width: 100vw !important; height: calc(100vh - 60px) !important; max-height: calc(100vh - 60px) !important; margin-top: 0 !important; border-radius: 0 !important; border: none !important; border-top: 2px solid #FFC107 !important; padding: 15px !important; } /* Menú de usuario en móvil */ .user-menu-responsive { position: fixed !important; top: 60px !important; right: 0 !important; left: 0 !important; width: 100vw !important; max-width: 100vw !important; margin-top: 0 !important; border-radius: 0 !important; border: none !important; border-top: 2px solid #FFC107 !important; } /* Buscador en móvil */ .header-search { display: none !important; } /* Menú móvil abierto */ .header-mobile-menu.open { left: 0 !important; } /* Overlay para menú móvil */ .mobile-menu-overlay { display: block !important; } /* Botón de vaciar carrito en móvil */ .clearCartBtn { padding: 6px 8px !important; } /* Confirmación en móvil */ .clearCartConfirm { margin: 10px 0 !important; padding: 12px !important; } .confirmText { font-size: 14px !important; margin-bottom: 12px !important; } .confirmButtons { gap: 10px !important; } .confirmYesBtn, .confirmNoBtn { padding: 8px 14px !important; font-size: 13px !important; } } /* Menú móvil en pantallas muy pequeñas */ @media (max-width: 480px) { .header-mobile-menu { width: 100% !important; max-width: 100% !important; } .cart-panel-responsive { padding: 12px !important; } .cartItem { padding: 8px 0 !important; } .cartItemImage { width: 45px !important; height: 45px !important; } .searchMobileInput { font-size: 14px !important; } } /* Responsive para tabletas (769px - 1024px) */ @media (min-width: 769px) and (max-width: 1024px) { .header-search input { width: 160px !important; } .header-nav { gap: 16px !important; } .navLink { padding: 6px 8px !important; font-size: 13px !important; } .cart-panel-responsive { width: 280px !important; } } /* Ocultar menú móvil en desktop */ @media (min-width: 769px) { .header-mobile-menu { display: none !important; } .header-menu-btn { display: none !important; } .mobile-menu-overlay { display: none !important; } } /* Animaciones */ @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } } .cart-panel-responsive { animation: slideDown 0.2s ease-out; } .user-menu-responsive { animation: slideDown 0.2s ease-out; } /* SCROLL INVISIBLE para el carrito */ .cart-scroll-invisible { overflow-y: auto; scrollbar-width: none; /* Firefox */ -ms-overflow-style: none; /* IE and Edge */ } .cart-scroll-invisible::-webkit-scrollbar { display: none; /* Chrome, Safari, Opera */ width: 0; height: 0; background: transparent; } .cart-scroll-invisible::-webkit-scrollbar-track { background: transparent; } .cart-scroll-invisible::-webkit-scrollbar-thumb { background: transparent; border: none; } .cart-scroll-invisible::-webkit-scrollbar-thumb:hover { background: transparent; } /* Scroll invisible para menú móvil también */ .header-mobile-menu { scrollbar-width: none; -ms-overflow-style: none; } .header-mobile-menu::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; } .header-mobile-menu::-webkit-scrollbar-track { background: transparent; } .header-mobile-menu::-webkit-scrollbar-thumb { background: transparent; border: none; } /* Efectos hover para botones de confirmación */ .confirmYesBtn:hover { background: #ff5252 !important; } .confirmNoBtn:hover { background: rgba(255, 255, 255, 0.2) !important; } .clearCartBtn:hover { background: rgba(255, 107, 107, 0.2) !important; transform: scale(1.05); }`;
+const responsiveStyles = `/* Responsive para móviles (0-768px) */ @media (max-width: 768px) { .header-nav { display: none !important; } .header-menu-btn { display: block !important; } /* Carrito en móvil - más compacto */ .cart-panel-responsive { position: fixed !important; top: 60px !important; right: 0 !important; left: 0 !important; width: 100vw !important; max-width: 100vw !important; height: calc(100vh - 60px) !important; max-height: calc(100vh - 60px) !important; margin-top: 0 !important; border-radius: 0 !important; border: none !important; border-top: 2px solid #FFC107 !important; padding: 15px !important; } /* Menú de usuario en móvil */ .user-menu-responsive { position: fixed !important; top: 60px !important; right: 0 !important; left: 0 !important; width: 100vw !important; max-width: 100vw !important; margin-top: 0 !important; border-radius: 0 !important; border: none !important; border-top: 2px solid #FFC107 !important; } /* Buscador en móvil */ .header-search { display: none !important; } /* Menú móvil abierto */ .header-mobile-menu.open { left: 0 !important; } /* Overlay para menú móvil */ .mobile-menu-overlay { display: block !important; } /* Botón de vaciar carrito en móvil */ .clearCartBtn { padding: 6px 8px !important; } /* Confirmación en móvil */ .clearCartConfirm { margin: 10px 0 !important; padding: 12px !important; } .confirmText { font-size: 14px !important; margin-bottom: 12px !important; } .confirmButtons { gap: 10px !important; } .confirmYesBtn, .confirmNoBtn { padding: 8px 14px !important; font-size: 13px !important; } } /* Menú móvil en pantallas muy pequeñas */ @media (max-width: 480px) { .header-mobile-menu { width: 100% !important; max-width: 100% !important; } .cart-panel-responsive { padding: 12px !important; } .cartItem { padding: 8px 0 !important; } .cartItemImage { width: 45px !important; height: 45px !important; } .searchMobileInput { font-size: 14px !important; } } /* Responsive para tabletas (769px - 1024px) */ @media (min-width: 769px) and (max-width: 1024px) { .header-search input { width: 140px !important; } .header-nav { gap: 16px !important; } .navLink { padding: 6px 8px !important; font-size: 13px !important; } .cart-panel-responsive { width: 280px !important; } } /* Ocultar menú móvil en desktop */ @media (min-width: 769px) { .header-mobile-menu { display: none !important; } .header-menu-btn { display: none !important; } .mobile-menu-overlay { display: none !important; } } /* Animaciones */ @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } } .cart-panel-responsive { animation: slideDown 0.2s ease-out; } .user-menu-responsive { animation: slideDown 0.2s ease-out; } /* SCROLL INVISIBLE para el carrito */ .cart-scroll-invisible { overflow-y: auto; scrollbar-width: none; /* Firefox */ -ms-overflow-style: none; /* IE and Edge */ } .cart-scroll-invisible::-webkit-scrollbar { display: none; /* Chrome, Safari, Opera */ width: 0; height: 0; background: transparent; } .cart-scroll-invisible::-webkit-scrollbar-track { background: transparent; } .cart-scroll-invisible::-webkit-scrollbar-thumb { background: transparent; border: none; } .cart-scroll-invisible::-webkit-scrollbar-thumb:hover { background: transparent; } /* Scroll invisible para menú móvil también */ .header-mobile-menu { scrollbar-width: none; -ms-overflow-style: none; } .header-mobile-menu::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; } .header-mobile-menu::-webkit-scrollbar-track { background: transparent; } .header-mobile-menu::-webkit-scrollbar-thumb { background: transparent; border: none; } /* Efectos hover para botones de confirmación */ .confirmYesBtn:hover { background: #ff5252 !important; } .confirmNoBtn:hover { background: rgba(255, 255, 255, 0.2) !important; } .clearCartBtn:hover { background: rgba(255, 107, 107, 0.2) !important; transform: scale(1.05); }`;
 
 export default Header;

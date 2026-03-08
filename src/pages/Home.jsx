@@ -14,6 +14,7 @@ import {
   FaMinus,
   FaPlus,
   FaCheckCircle,
+  FaExclamationCircle,
 } from "react-icons/fa";
 import { initialProducts } from "../data";
 
@@ -25,6 +26,7 @@ DESCUENTO POR MAYOR
 ========================= */
 const BULK_MIN_QTY = 6;
 const BULK_DISCOUNT = 0.1;
+
 const applyBulkDiscount = (cart) => {
   const totalQty = cart.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0);
   if (totalQty < BULK_MIN_QTY) {
@@ -66,7 +68,7 @@ const RatingStars = ({ value }) => {
       {Array.from({ length: full }).map((_, i) => (
         <FaStar key={`f-${i}`} />
       ))}
-      {half === 1 && <FaStarHalfAlt key="half" />}
+      {half === 1 && <FaStarHalfAlt />}
       {Array.from({ length: empty }).map((_, i) => (
         <FaRegStar key={`e-${i}`} />
       ))}
@@ -103,6 +105,7 @@ const safeImg = (product) => {
 INVENTARIO
 ========================= */
 const INV_KEY = "inv_by_variant_v1";
+
 const readInventory = () => {
   try {
     return JSON.parse(localStorage.getItem(INV_KEY) || "{}");
@@ -121,11 +124,13 @@ const buildInitialInventoryFromProducts = (products) => {
     const sizes = normalizeSizes(p);
     const pid = String(p.id);
     if (!sizes.length) continue;
+
     const total = Math.max(0, Number(p.stock ?? 0));
     const totalSafe = Number.isFinite(total) ? total : 0;
     const baseTotal = totalSafe > 0 ? totalSafe : 12;
     const per = Math.floor(baseTotal / sizes.length);
     let rem = baseTotal - per * sizes.length;
+
     inv[pid] = {};
     for (const s of sizes) {
       const add = rem > 0 ? 1 : 0;
@@ -139,12 +144,15 @@ const buildInitialInventoryFromProducts = (products) => {
 const ensureInventory = (products) => {
   const current = readInventory();
   const built = buildInitialInventoryFromProducts(products);
+
   if (!Object.keys(current).length) {
     writeInventory(built);
     return built;
   }
+
   let changed = false;
   const merged = { ...current };
+
   for (const pid of Object.keys(built)) {
     if (!merged[pid]) {
       merged[pid] = built[pid];
@@ -158,6 +166,7 @@ const ensureInventory = (products) => {
       }
     }
   }
+
   if (changed) writeInventory(merged);
   return merged;
 };
@@ -175,10 +184,27 @@ const decreaseInventory = (inv, productId, talla, qty) => {
   return next;
 };
 
+// Función para determinar el color del stock
+const getStockColorClass = (stock) => {
+  if (stock === 0) return "stock-zero";
+  if (stock >= 10) return "stock-high";
+  if (stock >= 4 && stock <= 9) return "stock-medium";
+  if (stock >= 1 && stock <= 3) return "stock-low";
+  return "stock-zero";
+};
+
 /* =========================
 COMPONENT
 ========================= */
-const Home = ({ updateCart, cartItems }) => {
+const Home = ({ 
+  updateCart, 
+  cartItems,
+  searchTerm: externalSearchTerm,
+  searchResults: externalSearchResults,
+  isSearching: externalIsSearching,
+  onSearch,
+  onClearSearch
+}) => {
   const { pathname } = useLocation();
   const [carouselIndices, setCarouselIndices] = useState({
     ofertas: 0,
@@ -190,7 +216,9 @@ const Home = ({ updateCart, cartItems }) => {
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [showSizeError, setShowSizeError] = useState(false);
+  const [showQuantityAlert, setShowQuantityAlert] = useState(false);
+  const [availableStock, setAvailableStock] = useState(0);
+  const [remainingStock, setRemainingStock] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -200,6 +228,29 @@ const Home = ({ updateCart, cartItems }) => {
     const inv = ensureInventory(initialProducts);
     setInventory(inv);
   }, []);
+
+  // Actualizar stock disponible cuando cambia la talla seleccionada
+  useEffect(() => {
+    if (selectedProduct && selectedSize) {
+      const stock = getAvailableFor(inventory, selectedProduct.id, selectedSize);
+      setAvailableStock(stock);
+      setRemainingStock(stock);
+      if (quantity > stock) {
+        setQuantity(Math.max(1, stock));
+      }
+    } else {
+      setAvailableStock(0);
+      setRemainingStock(0);
+    }
+  }, [selectedProduct, selectedSize, inventory]);
+
+  // Actualizar stock restante cuando cambia la cantidad
+  useEffect(() => {
+    if (selectedProduct && selectedSize) {
+      const stock = getAvailableFor(inventory, selectedProduct.id, selectedSize);
+      setRemainingStock(Math.max(0, stock - quantity));
+    }
+  }, [quantity, selectedProduct, selectedSize, inventory]);
 
   const ofertas = useMemo(
     () =>
@@ -246,7 +297,6 @@ const Home = ({ updateCart, cartItems }) => {
     if (available < qty) return;
 
     const currentCart = cartItems || [];
-
     const cartItem = {
       id: product.id,
       name: product.nombre,
@@ -318,7 +368,7 @@ const Home = ({ updateCart, cartItems }) => {
       setSelectedProduct(product);
       setSelectedSize(null);
       setQuantity(1);
-      setShowSizeError(false);
+      setShowQuantityAlert(false);
     };
 
     return (
@@ -366,14 +416,21 @@ const Home = ({ updateCart, cartItems }) => {
           )}
         </div>
         <div className="gm-info">
-          <h3 className="gm-product-name">{product.nombre}</h3>
+          <h3 className="gm-product-name-light">{product.nombre}</h3>
           <div className="gm-stars-row">
             <RatingStars value={rating} />
           </div>
           <div className="gm-actions-row">
-            <span className="gm-price-actions">
-              ${Math.round(product.precio || 0).toLocaleString()}
-            </span>
+            <div className="gm-price-container-card">
+              {(product.hasDiscount || product.oferta) && product.originalPrice && (
+                <span className="gm-price-old-card">
+                  ${Math.round(product.originalPrice).toLocaleString()}
+                </span>
+              )}
+              <span className="gm-price-actions">
+                ${Math.round(product.precio || 0).toLocaleString()}
+              </span>
+            </div>
             <button
               className="gm-btn gm-btn-cart"
               onClick={handleOpenModal}
@@ -387,12 +444,13 @@ const Home = ({ updateCart, cartItems }) => {
     );
   };
 
-  const sizesForModal = selectedProduct ? normalizeSizes(selectedProduct) : [];
+  const sizesForModal = selectedProduct ? normalizeSizes(selectedProduct).slice(0, 4) : [];
+
   const closeModal = () => {
     setSelectedProduct(null);
     setSelectedSize(null);
     setQuantity(1);
-    setShowSizeError(false);
+    setShowQuantityAlert(false);
   };
 
   const handleSizeSelect = (talla) => {
@@ -400,33 +458,33 @@ const Home = ({ updateCart, cartItems }) => {
       setSelectedSize(null);
     } else {
       setSelectedSize(talla);
-      setShowSizeError(false);
+      setQuantity(1);
     }
   };
 
   const handleModalAddToCart = () => {
     if (!selectedProduct) return;
     if (sizesForModal.length > 0 && !selectedSize) {
-      setShowSizeError(true);
-      setTimeout(() => setShowSizeError(false), 2000);
+      setShowQuantityAlert(true);
+      setTimeout(() => setShowQuantityAlert(false), 2000);
       return;
     }
-
     const size = selectedSize ? selectedSize : sizesForModal[0];
     addQuickToCart(selectedProduct, size, quantity);
   };
 
   const incrementQuantity = () => {
     if (!selectedSize && sizesForModal.length > 0) {
-      setShowSizeError(true);
-      setTimeout(() => setShowSizeError(false), 2000);
+      setShowQuantityAlert(true);
+      setTimeout(() => setShowQuantityAlert(false), 2000);
       return;
     }
-    const available = selectedSize
-      ? getAvailableFor(inventory, selectedProduct?.id, selectedSize)
-      : 99;
-    if (quantity < available && quantity < 10) {
+    
+    if (quantity < availableStock) {
       setQuantity(quantity + 1);
+    } else if (quantity >= availableStock) {
+      setShowQuantityAlert(true);
+      setTimeout(() => setShowQuantityAlert(false), 2000);
     }
   };
 
@@ -463,6 +521,11 @@ const Home = ({ updateCart, cartItems }) => {
     },
   ];
 
+  const basePrice = selectedProduct ? Math.round(selectedProduct.precio || 0) : 0;
+  const originalPrice = selectedProduct?.originalPrice ? Math.round(selectedProduct.originalPrice) : basePrice;
+  const isWholesale = quantity >= BULK_MIN_QTY;
+  const displayPrice = isWholesale ? Math.round(basePrice * (1 - BULK_DISCOUNT)) : basePrice;
+
   return (
     <div className="gm-home">
       {/* HERO */}
@@ -482,74 +545,185 @@ const Home = ({ updateCart, cartItems }) => {
       </section>
 
       <div className="gm-container">
-        {sections.map((section) => (
-          <div key={section.id} className="gm-section">
-            <div className="gm-section-header">
-              <h2 className="gm-section-title">{section.title}</h2>
-              <Link to={section.link} className="gm-pill-btn">
-                <span>Ver todos</span> <FaArrowRight size={13} />
-              </Link>
-            </div>
-            <div className="gm-carousel">
-              <button
-                className="gm-arrow gm-arrow-left"
-                onClick={() => handleCarouselScroll(section.id, "left")}
-                disabled={carouselIndices[section.id] === 0}
-                aria-label="Anterior"
-                type="button"
-              >
-                <FaChevronLeft size={16} />
-              </button>
-              <div className="gm-carousel-inner">
-                <div
-                  className="gm-track"
+        {/* RESULTADOS DE BÚSQUEDA */}
+        {externalIsSearching && (
+          <div style={{ marginBottom: '40px' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px',
+              padding: '15px',
+              background: 'rgba(255, 193, 7, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 193, 7, 0.2)'
+            }}>
+              <div>
+                <h2 style={{ color: '#FFC107', fontSize: '1.2rem', margin: '0 0 5px 0' }}>
+                  Resultados para: &quot;{externalSearchTerm}&quot;
+                </h2>
+                <p style={{ color: '#94A3B8', fontSize: '0.9rem', margin: 0 }}>
+                  {externalSearchResults.length} {externalSearchResults.length === 1 ? 'producto encontrado' : 'productos encontrados'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => onSearch && onSearch(externalSearchTerm)}
                   style={{
-                    transform: `translateX(-${
-                      carouselIndices[section.id] * 100
-                    }%)`,
+                    background: 'none',
+                    border: '1px solid #4F46E5',
+                    color: '#4F46E5',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#4F46E5';
+                    e.target.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'none';
+                    e.target.style.color = '#4F46E5';
                   }}
                 >
-                  {(section.data || []).map((p) => (
-                    <div key={p.id} className="gm-slot">
-                      <ProductCard
-                        product={p}
-                        badge={section.tag}
-                        badgeType={section.badgeType}
-                      />
+                  Nueva Búsqueda
+                </button>
+                <button
+                  onClick={onClearSearch}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #FFC107',
+                    color: '#FFC107',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#FFC107';
+                    e.target.style.color = '#000';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'none';
+                    e.target.style.color = '#FFC107';
+                  }}
+                >
+                  Volver al inicio
+                </button>
+              </div>
+            </div>
+            
+            {externalSearchResults.length > 0 ? (
+              <div className="gm-products-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '20px',
+                marginBottom: '30px'
+              }}>
+                {externalSearchResults.map(product => (
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    badge={product.hasDiscount ? "OFERTA" : product.destacado ? "DESTACADO" : null}
+                    badgeType={product.hasDiscount ? "oferta" : product.destacado ? "destacado" : null}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '60px 20px',
+                background: 'rgba(15, 23, 42, 0.7)',
+                borderRadius: '16px',
+                border: '2px dashed rgba(255, 193, 7, 0.3)',
+                marginBottom: '30px'
+              }}>
+                <p style={{ color: '#94A3B8', fontSize: '1.1rem' }}>
+                  No se encontraron productos para &quot;{externalSearchTerm}&quot;
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONTENIDO NORMAL DE LA PÁGINA */}
+        {!externalIsSearching && (
+          <>
+            {sections.map((section) => (
+              <div key={section.id} className="gm-section">
+                <div className="gm-section-header">
+                  <h2 className="gm-section-title">{section.title}</h2>
+                  <Link to={section.link} className="gm-view-all-link">
+                    Ver todos <FaChevronRight size={12} />
+                  </Link>
+                </div>
+
+                <div className="gm-carousel">
+                  <button
+                    className="gm-arrow gm-arrow-left"
+                    onClick={() => handleCarouselScroll(section.id, "left")}
+                    disabled={carouselIndices[section.id] === 0}
+                    aria-label="Anterior"
+                    type="button"
+                  >
+                    <FaChevronLeft size={16} />
+                  </button>
+
+                  <div className="gm-carousel-inner">
+                    <div
+                      className="gm-track"
+                      style={{
+                        transform: `translateX(-${
+                          (carouselIndices[section.id] || 0) * (100 / Math.min((section.data || []).length, 4))
+                        }%)`,
+                      }}
+                    >
+                      {(section.data || []).map((p) => (
+                        <div key={p.id} className="gm-slot-single">
+                          <ProductCard
+                            product={p}
+                            badge={section.tag}
+                            badgeType={section.badgeType}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  <button
+                    className="gm-arrow gm-arrow-right"
+                    onClick={() => handleCarouselScroll(section.id, "right")}
+                    disabled={
+                      (carouselIndices[section.id] || 0) >=
+                      (section.data?.length || 0) - 1
+                    }
+                    aria-label="Siguiente"
+                    type="button"
+                  >
+                    <FaChevronRight size={16} />
+                  </button>
                 </div>
               </div>
-              <button
-                className="gm-arrow gm-arrow-right"
-                onClick={() => handleCarouselScroll(section.id, "right")}
-                disabled={
-                  carouselIndices[section.id] >=
-                  Math.ceil((section.data?.length || 0) / 4) - 1
-                }
-                aria-label="Siguiente"
-                type="button"
-              >
-                <FaChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        ))}
+            ))}
 
-        {/* SECCIÓN CORREGIDA - AHORA APUNTA A /admin/Productos */}
-        <div className="gm-section">
-          <div className="gm-section-header">
-            <h2 className="gm-section-title">Todos los productos</h2>
-            <Link to="/productos" className="gm-pill-btn">
-              <span>Ver todos</span> <FaArrowRight size={13} />
-            </Link>
-          </div>
-        </div>
+            <div className="gm-section">
+              <div className="gm-section-header">
+                <h2 className="gm-section-title">Todos los productos</h2>
+                <Link to="/productos" className="gm-view-all-link">
+                  Ver todos <FaChevronRight size={12} />
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <Footer />
 
-      {/* MODAL DE PRODUCTO */}
+      {/* MODAL DE PRODUCTO - VERSIÓN MEJORADA */}
       {selectedProduct && (
         <div className="gm-modal-overlay" onClick={closeModal}>
           <div className="gm-modal" onClick={(e) => e.stopPropagation()}>
@@ -574,7 +748,7 @@ const Home = ({ updateCart, cartItems }) => {
             <div className="gm-modal-right">
               <div className="gm-modal-header-row">
                 <div className="gm-modal-title-row">
-                  <h2 className="gm-modal-title">{selectedProduct.nombre}</h2>
+                  <h2 className="gm-modal-title-light">{selectedProduct.nombre}</h2>
                   <div className="gm-modal-tags-inline">
                     {(selectedProduct.hasDiscount || selectedProduct.oferta) && (
                       <span className="gm-tag gm-tag--offer">Oferta</span>
@@ -584,43 +758,29 @@ const Home = ({ updateCart, cartItems }) => {
                     )}
                   </div>
                 </div>
-                <div className="gm-price-tags-row">
-                  <div className="gm-modal-price-below">
-                    ${Math.round(selectedProduct.precio || 0).toLocaleString()}
-                  </div>
-                  <div className="gm-modal-tags-inline">
-                    {selectedProduct.colores &&
-                      selectedProduct.colores.length > 0 && (
-                        <>
-                          {selectedProduct.colores.includes("Blanco") && (
-                            <span className="gm-tag gm-tag--color-white">
-                              Blanco
-                            </span>
-                          )}
-                          {selectedProduct.colores.includes("Café") && (
-                            <span className="gm-tag gm-tag--color-brown">
-                              Café
-                            </span>
-                          )}
-                          {selectedProduct.colores.includes("Azul") && (
-                            <span className="gm-tag gm-tag--color-blue">
-                              Azul
-                            </span>
-                          )}
-                        </>
-                      )}
-                  </div>
+                <div className="gm-price-row">
+                  {(selectedProduct.hasDiscount || selectedProduct.oferta) && selectedProduct.originalPrice && (
+                    <>
+                      <span className="gm-price-strikethrough">
+                        ${originalPrice.toLocaleString()}
+                      </span>
+                      <span className="gm-price-arrow">→</span>
+                    </>
+                  )}
+                  <span className="gm-modal-price">
+                    ${displayPrice.toLocaleString()}
+                  </span>
+                </div>
+                <div className="gm-product-description">
+                  {selectedProduct.descripcion || "Sin descripción disponible"}
                 </div>
               </div>
-              <div className="gm-bulk-discount-info">
-                A partir de {BULK_MIN_QTY} unidades tienes descuento por mayor
-              </div>
+              
+              {/* TALLAS - OCUPAN TODO EL ANCHO */}
               {sizesForModal.length > 0 && (
-                <div className="gm-sizes">
-                  <div className="gm-sizes-head">
-                    <span className="gm-sizes-label">Talla: </span>
-                  </div>
-                  <div className="gm-sizes-wrap">
+                <div className="gm-sizes-container">
+                  <div className="gm-section-label-light">Talla:</div>
+                  <div className="gm-sizes-grid">
                     {sizesForModal.map((t) => {
                       const ava = getAvailableFor(
                         inventory,
@@ -633,9 +793,7 @@ const Home = ({ updateCart, cartItems }) => {
                         <button
                           key={t}
                           type="button"
-                          className={`gm-size-chip ${
-                            disabled ? "is-disabled" : ""
-                          } ${isSelected ? "is-selected" : ""}`}
+                          className={`gm-size-chip-new ${disabled ? "is-disabled" : ""} ${isSelected ? "is-selected" : ""}`}
                           onClick={() => !disabled && handleSizeSelect(t)}
                           title={disabled ? "Agotado" : `Disponible: ${ava}`}
                         >
@@ -644,47 +802,89 @@ const Home = ({ updateCart, cartItems }) => {
                       );
                     })}
                   </div>
-                  {showSizeError && (
-                    <div className="gm-size-error-msg">
-                      ⚠️ Debes seleccionar una talla primero
-                    </div>
-                  )}
                 </div>
               )}
-              <div className="gm-quantity-selector">
-                <span className="gm-quantity-label">Cantidad: </span>
-                <div className="gm-quantity-controls">
+              
+              {/* CANTIDAD REDONDA Y SIEMPRE VISIBLE */}
+              <div className="gm-quantity-container">
+                <div className="gm-section-label-light">Cantidad:</div>
+                <div className="gm-quantity-round">
                   <button
-                    className="gm-qty-btn"
+                    className="gm-qty-btn-round"
                     onClick={decrementQuantity}
                     disabled={quantity <= 1}
                     type="button"
                   >
                     <FaMinus size={10} />
                   </button>
-                  <span className="gm-qty-value">{quantity}</span>
+                  <span className="gm-qty-value-round">{quantity}</span>
                   <button
-                    className="gm-qty-btn"
+                    className="gm-qty-btn-round"
                     onClick={incrementQuantity}
-                    disabled={quantity >= 10}
+                    disabled={quantity >= availableStock}
                     type="button"
                   >
                     <FaPlus size={10} />
                   </button>
                 </div>
               </div>
+              
+              {/* STOCK Y MENSAJES EN EL MISMO RENGLÓN */}
+              {selectedSize && (
+                <div className="gm-stock-row">
+                  <span className="gm-stock-label">Stock disponible:</span>
+                  {remainingStock === 0 ? (
+                    <>
+                      <span className="gm-stock-value stock-zero">0 unidades</span>
+                      <span className="gm-stock-separator">•</span>
+                      <span className="gm-out-of-stock-text">Agotado - No disponible</span>
+                    </>
+                  ) : (
+                    <span className={`gm-stock-value ${getStockColorClass(remainingStock)}`}>
+                      {remainingStock} unidades
+                    </span>
+                  )}
+                  
+                  {/* MENSAJE DE MAYORISTA EN EL MISMO RENGLÓN */}
+                  {quantity >= BULK_MIN_QTY && remainingStock > 0 && (
+                    <>
+                      <span className="gm-stock-separator">•</span>
+                      <span className="gm-wholesale-inline">
+                        <FaCheckCircle size={12} />
+                        <span>Gracias ya eres mayorista</span>
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ALERTA CUANDO EXCEDE STOCK O NO SELECCIONA TALLA */}
+              {showQuantityAlert && (
+                <div className="gm-quantity-alert">
+                  <FaExclamationCircle size={16} />
+                  <span>
+                    {!selectedSize && sizesForModal.length > 0 
+                      ? "Debes seleccionar una talla" 
+                      : quantity > availableStock && availableStock > 0
+                        ? `Solo hay ${availableStock} ${availableStock === 1 ? 'unidad' : 'unidades'} disponibles`
+                        : "No hay stock disponible"}
+                  </span>
+                </div>
+              )}
+              
+              {/* BOTONES - EL DE AÑADIR SIEMPRE VISIBLE PERO DESHABILITADO CUANDO CORRESPONDA */}
               <div className="gm-modal-buttons-row">
                 <button
-                  className={`gm-btn-add-cart ${
-                    showSizeError ? "gm-btn-error" : ""
-                  }`}
+                  className={`gm-btn-add-cart-yellow ${(!selectedSize && sizesForModal.length > 0) || remainingStock === 0 ? "gm-btn-disabled" : ""}`}
                   onClick={handleModalAddToCart}
+                  disabled={(!selectedSize && sizesForModal.length > 0) || remainingStock === 0}
                 >
-                  <FaShoppingCart size={16} /> Añadir al Carrito
+                  <FaShoppingCart size={16} /> 
+                  Añadir al Carrito
                 </button>
                 <Link
                   to="/cart"
-                  className="gm-btn-view-cart-thin"
+                  className="gm-btn-view-cart-new"
                   onClick={closeModal}
                 >
                   Ver Carrito
@@ -724,13 +924,16 @@ const Home = ({ updateCart, cartItems }) => {
           --gm-text: #fff;
           --gm-muted: rgba(255,255,255,.72);
           --gm-error: #ef4444;
+          --gm-stock-high: #10B981;
+          --gm-stock-medium: #F59E0B;
+          --gm-stock-low: #EF4444;
         }
         
         .gm-home {
           background: var(--gm-bg);
           color: var(--gm-text);
           min-height: 100vh;
-          padding-top: 70px;
+          padding-top: 60px;
           font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
         }
         
@@ -739,7 +942,7 @@ const Home = ({ updateCart, cartItems }) => {
           width: 100%;
           height: clamp(200px, 35vh, 350px);
           overflow: hidden;
-          background: var(--gm-black);
+          background: var(--gm-black); 
           margin-bottom: 30px;
         }
         
@@ -838,27 +1041,21 @@ const Home = ({ updateCart, cartItems }) => {
           color: var(--gm-text);
         }
         
-        .gm-pill-btn {
+        .gm-view-all-link {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 18px;
-          border-radius: 999px;
-          border: 1px solid var(--gm-yellow-border);
+          gap: 6px;
           color: var(--gm-yellow-text);
-          background: transparent;
           text-decoration: none;
-          font-weight: 700;
-          font-size: 0.92rem;
-          white-space: nowrap;
-          transition: 180ms ease;
+          font-size: 0.85rem;
+          font-weight: 400;
+          padding: 6px 12px;
+          border: 1px solid var(--gm-yellow-border);
+          border-radius: 20px;
+          transition: all 180ms ease;
         }
         
-        .gm-pill-btn svg {
-          color: var(--gm-yellow-text);
-        }
-        
-        .gm-pill-btn:hover {
+        .gm-view-all-link:hover {
           background: rgba(255,215,0,0.08);
         }
         
@@ -878,7 +1075,7 @@ const Home = ({ updateCart, cartItems }) => {
           transition: transform 0.55s ease;
         }
         
-        .gm-slot {
+        .gm-slot-single {
           min-width: 25%;
           padding: 0 10px;
           box-sizing: border-box;
@@ -888,8 +1085,8 @@ const Home = ({ updateCart, cartItems }) => {
           position: absolute;
           top: 45%;
           transform: translateY(-50%);
-          width: 44px;
-          height: 44px;
+          width: 48px;
+          height: 48px;
           border-radius: 12px;
           border: 2px solid var(--gm-yellow-border);
           background: rgba(0,0,0,0.55);
@@ -926,7 +1123,7 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         .gm-img-wrapper {
-          height: 200px;
+          height: 250px;
           position: relative;
           overflow: hidden;
           border-radius: 16px;
@@ -1019,13 +1216,19 @@ const Home = ({ updateCart, cartItems }) => {
           box-shadow: 0 0 10px rgba(255,215,0,.35);
         }
         
-        .gm-info {
-          padding: 12px 8px 10px 8px;
+        @media (max-width: 768px) {
+          .gm-img-dots {
+            display: none;
+          }
         }
         
-        .gm-product-name {
-          margin: 0 0 8px 0;
-          font-size: 0.95rem;
+        .gm-info {
+          padding: 8px 8px 6px 8px;
+        }
+        
+        .gm-product-name-light {
+          margin: 0 0 6px 0;
+          font-size: 0.9rem;
           font-weight: 400;
           line-height: 1.25;
           color: rgba(255,255,255,.92);
@@ -1036,7 +1239,7 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         .gm-stars-row {
-          margin-top: 6px;
+          margin-top: 4px;
         }
         
         .gm-rating {
@@ -1051,17 +1254,32 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         .gm-actions-row {
-          margin-top: 12px;
+          margin-top: 4px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
         }
         
+        .gm-price-container-card {
+          display: flex;
+          flex-direction: row;
+          align-items: baseline;
+          gap: 12px;
+        }
+        
+        .gm-price-old-card {
+          font-size: 1rem;
+          color: rgba(255,255,255,0.5);
+          text-decoration: line-through;
+          font-family: "Times New Roman", Times, serif;
+          font-weight: 400;
+        }
+        
         .gm-price-actions {
           font-variant-numeric: tabular-nums;
           font-family: "Times New Roman", Times, serif;
-          font-size: 1.15rem;
+          font-size: 1.4rem;
           font-weight: 900;
           color: var(--gm-yellow-strong);
           white-space: nowrap;
@@ -1090,19 +1308,23 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         .gm-btn-cart {
-          width: 44px;
-          height: 44px;
+          width: 38px;
+          height: 38px;
           padding: 0;
           border-radius: 50%;
-          border: none;
-          background: #FFC107;
-          color: #000;
+          border: 1.5px solid var(--gm-yellow-border);
+          background: transparent;
+          color: var(--gm-yellow-text);
+          transition: all 0.3s ease;
         }
         
         .gm-btn-cart:hover {
-          background: #FFB300;
+          background: rgba(255,215,0,0.25);
+          border-color: #FFA500;
+          color: #FFA500;
+          transform: scale(1.05);
         }
-        
+         
         .gm-modal-overlay {
           position: fixed;
           inset: 0;
@@ -1116,13 +1338,13 @@ const Home = ({ updateCart, cartItems }) => {
         
         .gm-modal {
           position: relative;
-          width: min(900px, 100%);
+          width: min(900px, 95%);
           background: #030712;
           border: none;
           border-radius: 16px;
           display: flex;
-          gap: 12px;
-          padding: 12px;
+          gap: 16px;
+          padding: 16px;
           box-shadow: 0 20px 50px rgba(0,0,0,0.55);
         }
         
@@ -1142,7 +1364,7 @@ const Home = ({ updateCart, cartItems }) => {
           align-items: center;
           justify-content: center;
           transition: all 0.2s ease;
-        }
+        } 
         
         .gm-modal-close:hover {
           background: rgba(255,255,255,0.1);
@@ -1151,7 +1373,7 @@ const Home = ({ updateCart, cartItems }) => {
         
         .gm-modal-left {
           flex: 0 0 45%;
-          min-width: 320px;
+          min-width: 300px;
           border-radius: 12px;
           overflow: hidden;
         }
@@ -1159,7 +1381,7 @@ const Home = ({ updateCart, cartItems }) => {
         .gm-modal-imgbox {
           width: 100%;
           height: 100%;
-          min-height: 380px;
+          min-height: 300px;
           background: #000;
           border-radius: 12px;
           overflow: hidden;
@@ -1171,7 +1393,7 @@ const Home = ({ updateCart, cartItems }) => {
         .gm-modal-img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
           object-position: center;
         }
         
@@ -1179,7 +1401,7 @@ const Home = ({ updateCart, cartItems }) => {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
           padding: 10px;
         }
         
@@ -1190,31 +1412,45 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         .gm-modal-title-row {
-          display: flex;
+          display: flex; 
           align-items: center;
           gap: 12px;
           flex-wrap: wrap;
         }
         
-        .gm-modal-title {
+        .gm-modal-title-light {
           margin: 0;
-          font-size: 1.5rem;
-          font-weight: 500;
+          font-size: 1.4rem;
+          font-weight: 400;
           line-height: 1.2;
           color: #fff;
         }
         
-        .gm-price-tags-row {
+        .gm-price-row {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           flex-wrap: wrap;
+          margin: 4px 0;
         }
         
-        .gm-modal-price-below {
+        .gm-price-strikethrough {
+          color: rgba(255,255,255,0.5);
+          text-decoration: line-through;
+          font-size: 1rem;
+          font-family: "Times New Roman", Times, serif;
+        }
+        
+        .gm-price-arrow {
+          color: var(--gm-yellow-strong);
+          font-size: 1rem;
+          font-weight: 700;
+        }
+        
+        .gm-modal-price {
           color: var(--gm-yellow-strong);
           font-weight: 900;
-          font-size: 1.4rem;
+          font-size: 1.3rem;
           font-family: "Times New Roman", Times, serif;
           white-space: nowrap;
         }
@@ -1225,12 +1461,23 @@ const Home = ({ updateCart, cartItems }) => {
           flex-wrap: wrap;
         }
         
+        .gm-product-description {
+          margin-top: 8px;
+          padding: 8px 12px;
+          background: rgba(42,74,111,0.2);
+          border-radius: 8px;
+          font-size: 0.85rem;
+          color: var(--gm-muted);
+          border: 1px solid rgba(96,165,250,0.2);
+          line-height: 1.4;
+        }
+        
         .gm-tag--color-white { 
           background: #fff;
           color: #000;
           border-color: #fff;
         }
-        
+         
         .gm-tag--color-brown {
           background: #8B4513;
           color: #fff;
@@ -1243,28 +1490,34 @@ const Home = ({ updateCart, cartItems }) => {
           border-color: #0047AB;
         }
         
-        .gm-bulk-discount-info {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: var(--gm-blue-text);
-          margin: 2px 0 4px 0;
-          padding: 5px 10px;
-          background: rgba(42,74,111,0.4);
-          border-radius: 6px;
-          display: inline-block;
-          width: fit-content;
+        .gm-tag--color-black {
+          background: #000;
+          color: #fff;
+          border-color: #333;
         }
         
-        .gm-tag {
-          padding: 4px 10px;
+        .gm-tag--color-gray {
+          background: #6B7280;
+          color: #fff;
+          border-color: #6B7280;
+        }
+        
+        .gm-tag--color-red {
+          background: #DC2626;
+          color: #fff;
+          border-color: #DC2626;
+        }
+        
+        .gm-tag { 
+          padding: 4px 8px;
           border-radius: 12px;
           font-weight: 700;
-          font-size: 0.72rem;
+          font-size: 0.7rem;
           border: 1px solid rgba(96,165,250,0.35);
           color: #fff;
         }
         
-        .gm-tag--featured {
+         .gm-tag--featured {
           background: var(--gm-blue-light);
           border-color: var(--gm-blue-medium);
         }
@@ -1274,62 +1527,175 @@ const Home = ({ updateCart, cartItems }) => {
           border-color: var(--gm-blue-dark);
         }
         
-        .gm-sizes {
-          background: rgba(42,74,111,0.3);
-          border: 1px solid rgba(96,165,250,0.2);
-          border-radius: 12px;
-          padding: 10px;
-          margin: 4px 0;
+        /* TALLAS */
+        .gm-sizes-container {
+          margin: 8px 0 4px 0;
+          width: 100%;
         }
         
-        .gm-sizes-head {
-          margin-bottom: 8px;
-        }
-        
-        .gm-sizes-label {
-          font-weight: 700;
-          color: #fff;
-          font-size: 0.9rem;
-        }
-        
-        .gm-sizes-wrap {
+        .gm-sizes-grid {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          margin-top: 6px;
+          width: 100%;
         }
         
-        .gm-size-chip {
+        .gm-size-chip-new {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 6px 14px;
-          border-radius: 20px;
-          border: 1px solid rgba(96,165,250,0.3);
-          background: rgba(42,74,111,0.4);
+          padding: 6px 12px;
+          border-radius: 999px;
+          border: 1px solid #2A4A6F;
+          background: transparent;
           color: #fff;
-          font-weight: 600;
-          font-size: 0.82rem;
-          min-width: 48px;
+          font-weight: 400;
+          font-size: 0.85rem;
+          min-width: 45px;
           text-align: center;
           cursor: pointer;
           transition: all 0.2s ease;
         }
         
-        .gm-size-chip:hover:not(.is-disabled) {
-          border-color: var(--gm-blue-light);
+        .gm-size-chip-new:hover:not(.is-disabled) {
+          border-color: #FFD700;
+          color: #FFD700;
+        }
+        
+        .gm-size-chip-new.is-selected {
+          border-color: #FFD700;
+          color: #FFD700;
+        }
+        
+        .gm-size-chip-new.is-disabled {
+          opacity: 0.35;
+          border-color: rgba(255,255,255,0.2);
+          cursor: not-allowed;
+        }
+        
+        /* CANTIDAD REDONDA Y SIEMPRE VISIBLE - VERSIÓN COMPACTA */
+        .gm-quantity-container {
+          margin: 8px 0 4px 0;
+          width: 100%;
+        }
+        
+        .gm-quantity-round {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border: 1px solid #2A4A6F;
+          border-radius: 30px;
+          padding: 4px 8px;
+          margin-top: 4px;
+          width: fit-content;
+          background: rgba(0,0,0,0.2);
+        }
+        
+        .gm-qty-btn-round {
+          width: 28px;
+          height: 28px;
+          border: none;
+          background: rgba(42,74,111,0.3);
+          color: #fff;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+          font-size: 0.8rem;
+        }
+        
+        .gm-qty-btn-round:hover:not(:disabled) {
           background: rgba(42,74,111,0.6);
         }
         
-        .gm-size-chip.is-selected {
-          background: rgba(255, 215, 0, 0.15);
-          border-color: var(--gm-yellow-border);
-          color: var(--gm-yellow-text);
+        .gm-qty-btn-round:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
         }
         
-        .gm-size-chip.is-disabled {
-          opacity: 0.35;
-          border-color: rgba(255,255,255,0.10);
-          cursor: not-allowed;
+        .gm-qty-value-round {
+          min-width: 24px;
+          text-align: center;
+          font-weight: 500;
+          font-size: 0.9rem;
+          color: #fff;
+        }
+        
+        .gm-section-label-light {
+          font-weight: 400;
+          color: #fff;
+          font-size: 0.9rem;
+          margin-bottom: 4px;
+        }
+        
+        /* STOCK Y MENSAJES EN EL MISMO RENGLÓN */
+        .gm-stock-row {
+          margin: 8px 0 4px 0;
+          padding: 6px 0;
+          font-size: 0.85rem;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          border-top: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          padding: 8px 0;
+        }
+        
+        .gm-stock-label {
+          color: rgba(255,255,255,0.5);
+          font-weight: 400;
+          font-size: 0.8rem;
+        }
+        
+        .gm-stock-value {
+          font-weight: 500;
+          font-size: 0.85rem;
+        }
+        
+        .gm-stock-separator {
+          color: rgba(255,255,255,0.3);
+          font-size: 0.8rem;
+          margin: 0 2px;
+        }
+        
+        .gm-out-of-stock-text {
+          color: #ef4444;
+          font-weight: 500;
+          font-size: 0.85rem;
+        }
+        
+        .gm-wholesale-inline {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          color: #10B981;
+          font-weight: 500;
+          font-size: 0.85rem;
+        }
+        
+        .gm-wholesale-inline svg {
+          color: #10B981;
+        }
+        
+        /* Colores dinámicos para el stock */
+        .stock-high {
+          color: var(--gm-stock-high);
+        }
+        
+        .stock-medium {
+          color: var(--gm-stock-medium);
+        }
+        
+        .stock-low {
+          color: var(--gm-stock-low);
+        }
+        
+        .stock-zero {
+          color: #ef4444;
         }
         
         .gm-size-error-msg {
@@ -1346,74 +1712,37 @@ const Home = ({ updateCart, cartItems }) => {
           75% { transform: translateX(5px); }
         }
         
-        .gm-quantity-selector {
+        .gm-quantity-alert{
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin: 6px 0;
-        }
-        
-        .gm-quantity-label {
-          font-weight: 700;
-          font-size: 0.9rem;
-          color: #fff;
-        }
-        
-        .gm-quantity-controls {
-          display: flex;
-          align-items: center;
-          gap: 0;
-          border: 1px solid var(--gm-blue-light);
-          border-radius: 20px;
-          overflow: hidden;
-        }
-        
-        .gm-qty-btn {
-          width: 32px;
-          height: 32px;
-          border: none;
-          background: rgba(42,74,111,0.6);
-          color: #fff;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-        }
-        
-        .gm-qty-btn:hover:not(:disabled) {
-          background: rgba(42,74,111,0.8);
-        }
-        
-        .gm-qty-btn:disabled {
-          opacity: 0.3;
-          cursor: not-allowed;
-        }
-        
-        .gm-qty-value {
-          min-width: 40px;
-          text-align: center;
-          font-weight: 900;
-          font-size: 1rem;
-          color: #fff;
+          gap: 8px;
+          padding: 8px 12px;
+          background: rgba(239, 68, 68, 0.15);
+          border: 1px solid #ef4444; 
+          border-radius: 8px;
+          color: #ef4444;
+          font-size: 0.85rem;
+          font-weight: 500;
+          margin: 4px 0;
         }
         
         .gm-modal-buttons-row {
           display: flex;
-          gap: 10px;
-          margin-top: 8px;
+          gap: 12px;
+          margin-top: 10px;
         }
         
-        .gm-btn-add-cart {
+        /* BOTÓN AÑADIR AMARILLO SIEMPRE - SIEMPRE VISIBLE */
+        .gm-btn-add-cart-yellow {
           flex: 2;
           height: 42px;
           padding: 0 16px;
-          border-radius: 10px;
-          border: none;
+          border-radius: 6px;
+          border: 1.5px solid #FFB300;
           background: #FFB300;
           color: #000;
           font-weight: 700;
-          font-size: 0.95rem;
+          font-size: 0.9rem;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1423,31 +1752,32 @@ const Home = ({ updateCart, cartItems }) => {
           white-space: nowrap;
         }
         
-        .gm-btn-add-cart:hover {
-          background: #FFA000;
-        }
-        
-        .gm-btn-error {
-          animation: pulse-red 0.4s ease-in-out;
-          background: var(--gm-error) !important;
-          color: white !important;
-        }
-        
-        @keyframes pulse-red {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
-          100% { transform: scale(1); }
-        }
-        
-        .gm-btn-view-cart-thin {
-          flex: 1;
-          height: 36px;
-          padding: 0 10px;
-          border-radius: 8px;
-          border: 1.5px solid #FFB300;
+        .gm-btn-add-cart-yellow:hover:not(:disabled) {
           background: transparent;
           color: #FFB300;
-          font-weight: 600;
+        }
+        
+        .gm-btn-add-cart-yellow.gm-btn-disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background: #FFB300;
+          color: #000;
+        }
+        
+        .gm-btn-add-cart-yellow:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        
+        .gm-btn-view-cart-new {
+          flex: 1;
+          height: 36px;
+          padding: 0 12px;
+          border-radius: 6px;
+          border: 1px solid #FFB300;
+          background: transparent;
+          color: #FFB300;
+          font-weight: 400;
           font-size: 0.75rem;
           cursor: pointer;
           display: flex;
@@ -1459,7 +1789,7 @@ const Home = ({ updateCart, cartItems }) => {
           min-width: auto;
         }
         
-        .gm-btn-view-cart-thin:hover {
+        .gm-btn-view-cart-new:hover {
           background: rgba(255, 179, 0, 0.1);
           border-color: #FFA000;
           color: #FFA000;
@@ -1509,17 +1839,26 @@ const Home = ({ updateCart, cartItems }) => {
           }
         }
         
+        .gm-products-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+        }
+        
         @media (max-width: 980px) {
-          .gm-slot { min-width: 50%; }
+          .gm-products-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .gm-slot-single { min-width: 33.333%; }
           .gm-arrow-left { left: -6px; }
           .gm-arrow-right { right: -6px; }
           .gm-modal { flex-direction: column; }
           .gm-modal-left { min-width: auto; width: 100%; }
-          .gm-modal-imgbox { min-height: 300px; }
+          .gm-modal-imgbox { min-height: 250px; }
           .gm-modal-buttons-row {
             flex-direction: column;
           }
-          .gm-btn-view-cart-thin {
+          .gm-btn-view-cart-new {
             width: 100%;
           }
           .success-toast-container {
@@ -1534,6 +1873,11 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         @media (max-width: 768px) {
+          .gm-products-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .gm-slot-single { min-width: 50%; }
+          
           .gm-hero {
             height: clamp(180px, 30vh, 280px);
           }
@@ -1547,7 +1891,7 @@ const Home = ({ updateCart, cartItems }) => {
           }
           
           .gm-img-wrapper {
-            height: 180px;
+            height: 200px;
           }
           
           .gm-modal {
@@ -1561,22 +1905,22 @@ const Home = ({ updateCart, cartItems }) => {
             flex: none;
             width: 100%;
             min-width: auto;
-            max-height: 50vh;
+            max-height: 45vh;
           }
           
           .gm-modal-imgbox {
-            min-height: 250px;
-            max-height: 50vh;
+            min-height: 200px;
+            max-height: 45vh;
           }
           
           .gm-modal-img {
             object-fit: contain;
-          }
+          } 
           
           .gm-modal-right {
             flex: 1;
             overflow-y: auto;
-            max-height: 40vh;
+            max-height: 45vh;
             scrollbar-width: none;
             -ms-overflow-style: none;
           }
@@ -1587,23 +1931,42 @@ const Home = ({ updateCart, cartItems }) => {
             background: transparent;
           }
           
-          .gm-modal-title {
+          .gm-modal-title-light {
             font-size: 1.3rem;
           }
           
-          .gm-modal-price-below {
+          .gm-modal-price {
             font-size: 1.2rem;
           }
           
-          .gm-size-chip {
-            padding: 8px 12px;
-            font-size: 0.9rem;
-            min-width: 44px;
+          .gm-size-chip-new {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            min-width: 45px;
           }
           
-          .gm-qty-btn {
-            width: 36px;
-            height: 36px;
+          .gm-qty-btn-round {
+            width: 26px;
+            height: 26px;
+          }
+          
+          .gm-qty-value-round {
+            font-size: 0.85rem;
+            min-width: 22px;
+          }
+          
+          .gm-sizes-grid {
+            gap: 6px;
+          }
+          
+          .gm-quantity-round {
+            padding: 3px 6px;
+            gap: 6px;
+          }
+          
+          .gm-stock-row {
+            gap: 6px;
+            font-size: 0.8rem;
           }
           
           .gm-modal-buttons-row {
@@ -1612,32 +1975,32 @@ const Home = ({ updateCart, cartItems }) => {
             margin-top: 12px;
           }
           
-          .gm-btn-add-cart {
+          .gm-btn-add-cart-yellow {
             flex: 2;
             height: 40px;
             padding: 0 12px;
             font-size: 0.85rem;
-            border-radius: 8px;
+            border-radius: 4px;
             box-shadow: none !important;
           }
           
-          .gm-btn-add-cart:hover {
-            background: #FFA000;
+          .gm-btn-add-cart-yellow:hover {
+            background: transparent;
             box-shadow: none !important;
             transform: none !important;
-          }
+          } 
           
-          .gm-btn-view-cart-thin {
+          .gm-btn-view-cart-new {
             flex: 1;
             height: 34px;
             padding: 0 8px;
             min-width: auto;
             font-size: 0.7rem;
-            border-radius: 6px;
+            border-radius: 4px;
             box-shadow: none !important;
           }
           
-          .gm-btn-view-cart-thin:hover {
+          .gm-btn-view-cart-new:hover {
             background: rgba(255, 179, 0, 0.1);
             border-color: #FFA000;
             color: #FFA000;
@@ -1647,7 +2010,10 @@ const Home = ({ updateCart, cartItems }) => {
         }
         
         @media (max-width: 640px) {
-          .gm-slot { min-width: 100%; }
+          .gm-products-grid {
+            grid-template-columns: 1fr;
+          }
+          .gm-slot-single { min-width: 100%; }
           
           .gm-modal-buttons-row {
             display: flex;
@@ -1655,29 +2021,36 @@ const Home = ({ updateCart, cartItems }) => {
             gap: 6px;
           }
           
-          .gm-btn-add-cart {
+          .gm-btn-add-cart-yellow {
             flex: 2;
             height: 36px;
             padding: 0 10px;
             font-size: 0.75rem;
-            border-radius: 6px;
+            border-radius: 4px;
             box-shadow: none !important;
           }
           
-          .gm-btn-view-cart-thin {
+          .gm-btn-view-cart-new {
             flex: 1;
             height: 32px;
             padding: 0 6px;
             font-size: 0.65rem;
             min-width: auto;
-            border-radius: 6px;
+            border-radius: 4px;
             box-shadow: none !important;
           }
         }
         
         @media (max-width: 480px) {
+          .gm-products-grid {
+            grid-template-columns: 1fr;
+          }
           .gm-container {
             padding: 0 15px 40px 15px;
+          }
+          
+          .gm-img-wrapper {
+            height: 180px;
           }
           
           .gm-modal {
@@ -1686,29 +2059,29 @@ const Home = ({ updateCart, cartItems }) => {
           }
           
           .gm-modal-left {
-            max-height: 45vh;
+            max-height: 40vh;
           }
           
           .gm-modal-imgbox {
-            min-height: 200px;
-            max-height: 45vh;
+            min-height: 150px;
+            max-height: 40vh;
           }
           
-          .gm-modal-title {
+          .gm-modal-title-light {
             font-size: 1.15rem;
           }
-           
-          .gm-modal-price-below {
+          
+          .gm-modal-price {
             font-size: 1.1rem;
           }
           
-          .gm-sizes-wrap {
-            gap: 6px;
+          .gm-sizes-grid {
+            gap: 5px; 
           }
           
-          .gm-size-chip {
-            padding: 6px 10px; 
-            font-size: 0.85rem;
+          .gm-size-chip-new {
+            padding: 4px 10px;
+            font-size: 0.75rem;
             min-width: 40px;
           }
           
@@ -1719,16 +2092,26 @@ const Home = ({ updateCart, cartItems }) => {
             right: 8px;
           }
           
-          .gm-btn-add-cart {
+          .gm-btn-add-cart-yellow {
             height: 34px;
             font-size: 0.7rem;
             padding: 0 8px;
           }
           
-          .gm-btn-view-cart-thin {
+          .gm-btn-view-cart-new {
             height: 30px;
             font-size: 0.65rem;
             padding: 0 5px;
+          }
+          
+          .gm-qty-btn-round {
+            width: 24px;
+            height: 24px;
+          }
+          
+          .gm-qty-value-round {
+            font-size: 0.8rem;
+            min-width: 20px;
           }
           
           .success-toast-container {
@@ -1747,15 +2130,15 @@ const Home = ({ updateCart, cartItems }) => {
           background: transparent;
         }
         
-        .gm-btn-add-cart,
-        .gm-btn-view-cart-thin,
+        .gm-btn-add-cart-yellow,
+        .gm-btn-view-cart-new,
         .gm-btn-cart {
           box-shadow: none !important;
           transition: background 180ms ease, border-color 180ms ease, color 180ms ease !important;
         }
         
-        .gm-btn-add-cart:hover,
-        .gm-btn-view-cart-thin:hover,
+        .gm-btn-add-cart-yellow:hover,
+        .gm-btn-view-cart-new:hover,
         .gm-btn-cart:hover {
           box-shadow: none !important;
           transform: none !important;

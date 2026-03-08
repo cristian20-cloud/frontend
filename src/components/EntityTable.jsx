@@ -88,10 +88,12 @@ const EntityTable = ({
               <th
                 key={i}
                 style={{
-                  padding: "8px 10px",
+                  padding: col.headerStyle?.padding || "6px 4px",
+                  paddingLeft: col.headerStyle?.paddingLeft,
                   color: "#F5C81B",
                   fontWeight: 600,
-                  textAlign: "left",
+                  textAlign: col.headerStyle?.textAlign || col.align || "left",
+                  width: col.width || "auto",
                 }}
               >
                 {col.header}
@@ -99,11 +101,11 @@ const EntityTable = ({
             ))}
             <th
               style={{
-                padding: "8px 10px",
+                padding: "6px 4px",
                 color: "#F5C81B",
                 fontWeight: 600,
                 textAlign: "right",
-                width: "160px",
+                width: "140px",
               }}
             >
               Acciones
@@ -132,7 +134,6 @@ const EntityTable = ({
                 row[getEstadoField()] === 1 ||
                 row[getEstadoField()] === "Activo" ||
                 row[getEstadoField()] === "Completada";
-
               const admin = isAdministrador(row);
               const showSwitch = moduleType !== "ventas" && moduleType !== "compras";
               const toggleAction = showSwitch ? (isCurrentlyActive ? onAnular : onReactivar) : null;
@@ -142,7 +143,7 @@ const EntityTable = ({
                   key={row[idField] || rowIndex}
                   style={{
                     borderBottom: "1px solid #222",
-                    height: "46px",
+                    height: "42px",
                     backgroundColor: "transparent",
                   }}
                 >
@@ -171,11 +172,11 @@ const EntityTable = ({
                       <td
                         key={`${col.field}-${colIndex}`}
                         style={{
-                          padding: "8px 10px",
+                          padding: "6px 4px",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          maxWidth: col.maxWidth || "180px",
+                          width: col.width || "auto",
                           color: "#fff",
                           textAlign: col.align || "left",
                         }}
@@ -188,14 +189,15 @@ const EntityTable = ({
 
                   <td
                     style={{
-                      padding: "8px 10px",
+                      padding: "6px 4px",
                       textAlign: "right",
+                      width: "140px",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
-                        gap: "8px",
+                        gap: "6px",
                         justifyContent: "flex-end",
                         alignItems: "center",
                         minHeight: "26px",
@@ -205,7 +207,7 @@ const EntityTable = ({
                         <>
                           {onView && (
                             <FaEye
-                              size={18}
+                              size={16}
                               color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onView(row)}
@@ -227,7 +229,7 @@ const EntityTable = ({
 
                           {onView && (
                             <FaEye
-                              size={18}
+                              size={16}
                               color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onView(row)}
@@ -237,7 +239,7 @@ const EntityTable = ({
 
                           {onEdit && moduleType !== "ventas" && moduleType !== "compras" && (
                             <FaEdit
-                              size={18}
+                              size={16}
                               color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onEdit(row)}
@@ -247,7 +249,7 @@ const EntityTable = ({
 
                           {onAnular && (moduleType === "ventas" || moduleType === "compras") && (
                             <FaBan
-                              size={18}
+                              size={16}
                               color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onAnular(row)}
@@ -257,7 +259,7 @@ const EntityTable = ({
 
                           {onDelete && moduleType !== "ventas" && moduleType !== "compras" && (
                             <FaTrash
-                              size={18}
+                              size={16}
                               color="#F5C81B"
                               style={{ cursor: "pointer", opacity: 1 }}
                               onClick={() => onDelete(row)}

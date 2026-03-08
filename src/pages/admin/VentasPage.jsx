@@ -1,6 +1,6 @@
 // src/pages/admin/VentasPage.jsx
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { initialSales, paymentMethods, initialProducts, initialCustomers, initialSizes} from '../../data';
+import { initialSales, initialProducts, initialCustomers, initialSizes, paymentMethods } from '../../data';
 import UniversalModal from '../../components/UniversalModal';
 import EntityTable from '../../components/EntityTable';
 import Alert from '../../components/Alert';
@@ -13,7 +13,7 @@ import DateInputWithCalendar from '../../components/DateInputWithCalendar';
 // =============================================
 const StatusPill = React.memo(function StatusPill({ status }) {
   const getColorForStatus = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'activo':
       case 'completada': return '#10B981';
       case 'anulada':
@@ -41,6 +41,7 @@ const StatusPill = React.memo(function StatusPill({ status }) {
     </span>
   );
 });
+StatusPill.displayName = 'StatusPill';
 
 // =============================================
 // COMPONENTE StatusFilter
@@ -60,7 +61,7 @@ const StatusFilter = React.memo(function StatusFilter({ filterStatus, onFilterSe
       >
         {filterStatus}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-          <path d="M6 9l6 6 6-6" />
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
       {open && (
@@ -82,134 +83,430 @@ const StatusFilter = React.memo(function StatusFilter({ filterStatus, onFilterSe
     </div>
   );
 });
+StatusFilter.displayName = 'StatusFilter';
+
+// =============================================
+// FUNCIÓN PARA OBTENER PRODUCTO MÁS VENDIDO POR CLIENTE
+// =============================================
+const getProductoMasVendido = (ventas, clienteNombre) => {
+  if (!ventas || !clienteNombre) return 'N/A';
+  const ventasCliente = ventas.filter(v =>
+    v && v.cliente === clienteNombre && v.estado !== 'Anulada'
+  );
+  if (ventasCliente.length === 0) return 'N/A';
+  const contadorProductos = {};
+  ventasCliente.forEach(venta => {
+    if (venta.productos && Array.isArray(venta.productos)) {
+      venta.productos.forEach(prod => {
+        if (prod && prod.nombre) {
+          const productoNombre = typeof prod.nombre === 'object'
+            ? prod.nombre.nombre || 'Producto'
+            : prod.nombre;
+          contadorProductos[productoNombre] = (contadorProductos[productoNombre] || 0) + (prod.cantidad || 0);
+        }
+      });
+    }
+  });
+  let productoMasVendido = null;
+  let maxCantidad = 0;
+  Object.entries(contadorProductos).forEach(([producto, cantidad]) => {
+    if (cantidad > maxCantidad) {
+      maxCantidad = cantidad;
+      productoMasVendido = producto;
+    }
+  });
+  return productoMasVendido ? String(productoMasVendido) : 'N/A';
+};
 
 // =============================================
 // COMPONENTE ProductoForm
 // =============================================
 const ProductoForm = React.memo(function ProductoForm({ producto, onChange, onRemove, index, isViewMode = false, isFirst = false }) {
-  const subtotal = (producto.cantidad || 0) * (parseFloat(producto.precio) || 0);
-  
   const productInputStyle = {
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#1e293b',
     border: '1px solid #334155',
     borderRadius: '4px',
-    color: '#ffffff',
-    fontSize: '12px',
     padding: '4px 6px',
-    width: '100%',
+    color: '#f1f5f9',
+    fontSize: '11px',
     height: '28px',
     outline: 'none',
+    width: '100%',
   };
-  
-  const productCardStyle = {
-    display: 'grid',
-    gap: '6px',
-    gridTemplateColumns: !isFirst ? '2.5fr 0.8fr 0.6fr 1fr auto' : '2.5fr 0.8fr 0.6fr 1fr',
-    alignItems: 'center',
-    padding: '0',
-    marginBottom: '6px',
-    backgroundColor: 'transparent'
-  };
-  
+
+  const subtotal = (producto.cantidad || 0) * (parseFloat(producto.precio) || 0);
+
   if (isViewMode) {
     return (
       <div style={{
         display: 'grid',
-        gap: '6px',
-        gridTemplateColumns: '2.5fr 0.8fr 0.6fr 1fr',
-        padding: '6px',
-        alignItems: 'center',
-        border: '1px solid #334155',
-        borderRadius: '6px',
-        marginBottom: '6px',
-        backgroundColor: '#0f0f0f'
+        gridTemplateColumns: '2fr 0.8fr 0.6fr 1fr 1fr',
+        gap: '4px',
+        padding: '4px 0',
+        alignItems: 'center'
       }}>
-        <div style={{ color: '#fff', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{producto.nombre || '-'}</div>
+        <div style={{ color: '#fff', fontSize: '11px' }}>{producto.nombre || '-'}</div>
         <div style={{ color: '#94a3b8', fontSize: '11px', textAlign: 'center' }}>{producto.talla || '-'}</div>
         <div style={{ color: '#fff', fontSize: '11px', textAlign: 'center' }}>{producto.cantidad || 0}</div>
-        <div style={{ color: '#F5C81B', fontSize: '11px', textAlign: 'center' }}>${(parseFloat(producto.precio) || 0).toLocaleString('es-CO')}</div>
+        <div style={{ color: '#F5C81B', fontSize: '11px', textAlign: 'right' }}>
+          ${(parseFloat(producto.precio) || 0).toLocaleString('es-CO')}
+        </div>
+        <div style={{ color: '#F5C81B', fontSize: '11px', textAlign: 'right', fontWeight: '600' }}>
+          ${subtotal.toLocaleString('es-CO')}
+        </div>
       </div>
     );
   }
-  
+
   return (
-    <div style={productCardStyle}>
-      <select
-        value={producto.id || ''}
-        onChange={(e) => {
-          const sel = initialProducts.find(p => p.id === parseInt(e.target.value));
-          onChange(index, 'id', sel?.id || '');
-          onChange(index, 'nombre', sel?.nombre || '');
-          onChange(index, 'precio', sel?.precio?.toString() || '');
-        }}
-        style={productInputStyle}
-      >
-        <option value="">Producto</option>
-        {initialProducts.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-      </select>
-      
-      <select
-        value={producto.talla || ''}
-        onChange={(e) => onChange(index, 'talla', e.target.value)}
-        style={productInputStyle}
-      >
-        <option value="">Talla</option>
-        {initialSizes?.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-      </select>
-      
-      <input
-        type="number"
-        value={producto.cantidad || ''}
-        onChange={(e) => onChange(index, 'cantidad', parseInt(e.target.value) || 0)}
-        style={productInputStyle}
-      />
-      
-      <div style={{ 
-        color: '#F5C81B', 
-        fontWeight: '700', 
-        textAlign: 'center', 
-        fontSize: '12px',
-        border: '1px solid #334155',
-        borderRadius: '4px',
-        padding: '4px 8px',
-        backgroundColor: '#0a0a0a'
+    <>
+      <style>{`.product-select-no-scroll { scrollbar-width: none; -ms-overflow-style: none; } .product-select-no-scroll::-webkit-scrollbar { display: none; }`}</style>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: !isFirst ? '2fr 0.8fr 0.6fr 1fr 0.2fr' : '2fr 0.8fr 0.6fr 1fr',
+        gap: '4px',
+        alignItems: 'center',
+        marginBottom: '4px',
       }}>
-        ${subtotal.toLocaleString('es-CO')}
-      </div>
-      
-      {!isFirst && (
-        <button 
-          type="button" 
-          onClick={() => onRemove(index)} 
-          style={{ 
-            border: 'none',
-            color: '#ef4444', 
-            background: 'transparent', 
-            cursor: 'pointer',
-            padding: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }} 
+        <select
+          value={producto.id || ''}
+          onChange={(e) => {
+            const sel = initialProducts.find(p => p.id === parseInt(e.target.value));
+            onChange(index, 'id', sel?.id || '');
+            onChange(index, 'nombre', sel?.nombre || '');
+            onChange(index, 'precio', sel?.precio?.toString() || '');
+          }}
+          style={{
+            ...productInputStyle,
+            overflow: 'hidden',
+          }}
+          className="product-select-no-scroll"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-          </svg>
-        </button>
-      )}
-    </div>
+          <option value="">Producto</option>
+          {initialProducts.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+        </select>
+        <select
+          value={producto.talla || ''}
+          onChange={(e) => onChange(index, 'talla', e.target.value)}
+          style={productInputStyle}
+        >
+          <option value="">Talla</option>
+          {initialSizes?.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+        <input
+          type="number"
+          min="1"
+          value={producto.cantidad || ''}
+          onChange={(e) => onChange(index, 'cantidad', parseInt(e.target.value) || 0)}
+          style={{
+            ...productInputStyle,
+            MozAppearance: 'textfield',
+            WebkitAppearance: 'none',
+            margin: 0,
+          }}
+          className="no-spinner"
+          placeholder="0"
+        />
+        <style>{`.no-spinner::-webkit-outer-spin-button, .no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }`}</style>
+        <div style={{
+          color: '#F5C81B',
+          fontWeight: '500',
+          fontSize: '11px',
+          textAlign: 'right',
+          padding: '4px 6px',
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          borderRadius: '4px',
+          height: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+        }}>
+          ${(parseFloat(producto.precio) || 0).toLocaleString('es-CO')}
+        </div>
+        {!isFirst && (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: '#ef4444',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        )}
+      </div>
+    </>
   );
 });
+ProductoForm.displayName = 'ProductoForm';
 
 const FormField = React.memo(function FormField({ label, required, children, error }) {
   return (
-    <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '8px' }}>
-      {label}: {required && <span style={{color: '#ef4444'}}>*</span>}
+    <div style={{ marginBottom: '8px' }}>
+      <label style={{ fontSize: '11px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>
+        {label}: {required && <span style={{ color: '#ef4444' }}>*</span>}
+      </label>
       {children}
-      {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
-    </label>
+      {error && <div style={{ color: '#f87171', fontSize: '10px', marginTop: '2px' }}>{error}</div>}
+    </div>
   );
 });
+FormField.displayName = 'FormField';
+
+// =============================================
+// COMPONENTE VentasFormFields
+// =============================================
+const VentasFormFields = ({
+  modalState,
+  formData,
+  errors,
+  handleFieldChange,
+  handleSave,
+  agregarProducto,
+  actualizarProducto,
+  eliminarProducto,
+  clientesActivos,
+}) => {
+  const isViewMode = modalState.mode === 'view';
+  const isCreateMode = modalState.mode === 'create';
+  const total = formData.productos?.reduce((sum, p) => {
+    const qty = p.cantidad || 0;
+    const price = parseFloat(p.precio) || 0;
+    return sum + (qty > 0 ? qty * price : 0);
+  }, 0) || 0;
+
+  if (isViewMode) {
+    const clienteDisplay = modalState.venta?.cliente || formData.cliente;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 2 }}>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>Cliente:</div>
+            <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "4px", padding: "6px 8px", color: "#f1f5f9", fontSize: "12px" }}>
+              {clienteDisplay || 'N/A'}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>Estado:</div>
+            <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "4px", padding: "6px 8px", color: "#f1f5f9", fontSize: "12px" }}>
+              {modalState.venta?.estado || formData.estado}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>Método de Pago:</div>
+            <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "4px", padding: "6px 8px", color: "#f1f5f9", fontSize: "12px" }}>
+              {modalState.venta?.metodoPago || formData.metodoPago}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>Fecha:</div>
+            <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "4px", padding: "6px 8px", color: "#f1f5f9", fontSize: "12px" }}>
+              {modalState.venta?.fecha || formData.fecha}
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>Productos:</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '2fr 0.8fr 0.6fr 1fr 1fr',
+            gap: '4px',
+            padding: '4px 0',
+            marginBottom: '4px'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '10px' }}>Producto</div>
+            <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'center' }}>Talla</div>
+            <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'center' }}>Cant.</div>
+            <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'right' }}>Precio</div>
+            <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'right' }}>Total</div>
+          </div>
+          {formData.productos?.map((p, i) => (
+            <ProductoForm
+              key={p._tempKey || i}
+              producto={p}
+              index={i}
+              onChange={actualizarProducto}
+              onRemove={eliminarProducto}
+              isFirst={i === 0}
+              isViewMode={true}
+            />
+          ))}
+        </div>
+     
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px"
+    }}>
+      <FormField label="Cliente" required error={errors.cliente}>
+        <select
+          value={formData.cliente}
+          onChange={(e) => handleFieldChange({ target: { name: 'cliente', value: e.target.value } })}
+          style={{
+            width: '100%', background: '#1e293b', color: '#fff',
+            border: errors.cliente ? '1px solid #ef4444' : '1px solid #334155',
+            height: '32px', borderRadius: '4px', padding: '0 8px', fontSize: '12px',
+            outline: 'none'
+          }}
+        >
+          <option value="">Seleccionar cliente</option>
+          {clientesActivos.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+        </select>
+      </FormField>
+      <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ flex: 1 }}>
+          <FormField label="Método de Pago" required error={errors.metodoPago}>
+            <select
+              value={formData.metodoPago}
+              onChange={(e) => handleFieldChange({ target: { name: 'metodoPago', value: e.target.value } })}
+              style={{
+                width: '100%', background: '#1e293b', color: '#fff',
+                border: errors.metodoPago ? '1px solid #ef4444' : '1px solid #334155',
+                height: '32px', borderRadius: '4px',
+                padding: '0 8px', fontSize: '12px', outline: 'none'
+              }}
+            >
+              {paymentMethods.filter(m => m !== 'Tarjeta').map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </FormField>
+        </div>
+        <div style={{ flex: 1 }}>
+          <FormField label="Fecha" required error={errors.fecha}>
+            <DateInputWithCalendar
+              value={formData.fecha}
+              onChange={(d) => handleFieldChange({ target: { name: 'fecha', value: d } })}
+              inputStyle={{
+                border: errors.fecha ? '1px solid #ef4444' : '1px solid #334155',
+                backgroundColor: '#1e293b', color: '#fff',
+                borderRadius: '4px', height: '32px', padding: '0 8px', fontSize: '12px', width: '100%',
+                outline: 'none'
+              }}
+            />
+          </FormField>
+        </div>
+      </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '4px'
+      }}>
+        <label style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: '500' }}>
+          Productos:
+        </label>
+        <button
+          onClick={agregarProducto}
+          style={{
+            backgroundColor: "transparent",
+            border: "1px solid #F5C81B",
+            color: "#F5C81B",
+            padding: "3px 8px",
+            borderRadius: "4px",
+            fontSize: "10px",
+            fontWeight: "500",
+            cursor: "pointer",
+            height: "26px",
+          }}
+        >
+          + Agregar
+        </button>
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '2fr 0.8fr 0.6fr 1fr',
+        gap: '4px',
+        marginBottom: '4px',
+        padding: '0 2px',
+      }}>
+        <div style={{ color: '#94a3b8', fontSize: '10px' }}>Producto</div>
+        <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'center' }}>Talla</div>
+        <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'center' }}>Cant.</div>
+        <div style={{ color: '#94a3b8', fontSize: '10px', textAlign: 'right' }}>Precio</div>
+      </div>
+      <div style={{
+        maxHeight: '100px',
+        overflowY: 'auto',
+        marginBottom: '4px',
+        paddingRight: '2px'
+      }}>
+        {formData.productos?.map((p, i) => (
+          <ProductoForm
+            key={p._tempKey || i}
+            producto={p}
+            index={i}
+            onChange={actualizarProducto}
+            onRemove={eliminarProducto}
+            isFirst={i === 0}
+            isViewMode={false}
+          />
+        ))}
+      </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        width: '100%',
+        marginTop: '2px',
+        paddingTop: '4px',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          marginRight: 'auto'
+        }}>
+          <span style={{ color: '#F5C81B', fontSize: '13px', fontWeight: '600' }}>
+            Total:
+          </span>
+          <span style={{ color: '#F5C81B', fontSize: '14px', fontWeight: '700' }}>
+            ${total.toLocaleString('es-CO')}
+          </span>
+        </div>
+        <div style={{
+          display: "flex",
+          gap: "6px"
+        }}>
+          <button
+            onClick={handleSave}
+            style={{
+              backgroundColor: "#F5C81B",
+              border: "none",
+              color: "#0f172a",
+              padding: "4px 12px",
+              borderRadius: "4px",
+              fontSize: "11px",
+              fontWeight: "600",
+              cursor: "pointer",
+              minWidth: "70px",
+              height: "30px",
+            }}
+          >
+            {isCreateMode ? "Registrar venta" : "Actualizar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+VentasFormFields.displayName = 'VentasFormFields';
 
 // =============================================
 // PÁGINA PRINCIPAL VentasPage
@@ -224,43 +521,87 @@ const VentasPage = () => {
   const [errors, setErrors] = useState({});
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'view', venta: null });
   const [anularModal, setAnularModal] = useState({ isOpen: false, venta: null });
-  const [nuevaVenta, setNuevaVenta] = useState({
+  const [formData, setFormData] = useState({
     cliente: '',
     metodoPago: 'Efectivo',
     fecha: new Date().toLocaleDateString('es-CO'),
-    productos: [{ id: '', nombre: '', talla: '', cantidad: 1, precio: '', _tempKey: Date.now() + Math.random() }],
+    productos: [{ id: '', nombre: '', talla: '', cantidad: '', precio: '', _tempKey: Date.now() + Math.random() }],
     estado: 'Completada'
   });
-  
+
   const clientesActivos = useMemo(() =>
     initialCustomers.filter(c => c.Estado).map(c => ({ id: c.IdCliente, nombre: c.Nombre })), []);
-  
+
   const columns = [
-    { header: 'Cliente', field: 'cliente', render: (item) => <span style={{ color: '#fff' }}>{typeof item.cliente === 'object' ? item.cliente?.nombre : item.cliente}</span> },
-    { header: 'Fecha', field: 'fecha', render: (item) => <span style={{ color: '#fff' }}>{item.fecha}</span> },
-    { header: 'Total', field: 'total', render: (item) => <span style={{ color: '#fff', fontWeight: '600' }}>${Number(item.total).toLocaleString('es-CO')}</span> },
-    { header: 'Método', field: 'metodoPago', render: (item) => <span style={{ color: '#fff' }}>{item.metodoPago}</span> },
-    { header: 'Estado', field: 'estado', render: (item) => <StatusPill status={item.estado} /> }
+    { header: 'Cliente', field: 'cliente', width: '150px', render: (item) => <span style={{ color: '#fff' }}>{String(item.cliente || '')}</span> },
+    { header: 'Fecha', field: 'fecha', width: '90px', render: (item) => <span style={{ color: '#fff' }}>{String(item.fecha || '')}</span> },
+    { header: 'Total', field: 'total', width: '90px', render: (item) => <span style={{ color: '#fff', fontWeight: '600' }}>${Number(item.total || 0).toLocaleString('es-CO')}</span> },
+    {
+      header: 'Producto más vendido',
+      field: 'productoMasVendido',
+      width: '180px',
+      render: (item) => {
+        const producto = getProductoMasVendido(ventas, item.cliente);
+        return <span style={{ color: '#F5C81B', fontSize: '12px' }}>{producto}</span>;
+      }
+    },
+    { header: 'Estado', field: 'estado', width: '100px', render: (item) => <StatusPill status={item.estado} /> }
   ];
-  
+
   useEffect(() => {
-    setVentas(initialSales.map(v => ({
-      id: `#${v.IdVenta}`,
-      cliente: v.cliente,
-      fecha: v.fecha ? new Date(v.fecha).toLocaleDateString('es-CO') : 'N/A',
-      total: v.total || 0,
-      metodoPago: v.metodoPago,
-      estado: v.estado === 'Cancelada' ? 'Anulada' : 'Completada',
-      productos: v.productos || [],
-      isActive: v.estado !== 'Cancelada'
-    })));
+    const ventasMapeadas = initialSales.map(v => {
+      let clienteNombre = 'N/A';
+      if (v.cliente) {
+        if (typeof v.cliente === 'object') {
+          clienteNombre = v.cliente.nombre || v.cliente.Nombre || 'Cliente';
+        } else {
+          clienteNombre = String(v.cliente);
+        }
+      }
+      const productosMapeados = Array.isArray(v.productos) ? v.productos.map(p => {
+        let nombreProducto = 'Producto';
+        if (p.nombre) {
+          if (typeof p.nombre === 'object') {
+            nombreProducto = p.nombre.nombre || p.nombre.Nombre || 'Producto';
+          } else {
+            nombreProducto = String(p.nombre);
+          }
+        }
+        return {
+          id: p.id || 0,
+          nombre: nombreProducto,
+          talla: p.talla || '',
+          cantidad: p.cantidad || 0,
+          precio: p.precio || 0
+        };
+      }) : [];
+      return {
+        id: `#${v.IdVenta || v.id || Date.now()}`,
+        cliente: clienteNombre,
+        fecha: v.fecha ? new Date(v.fecha).toLocaleDateString('es-CO') : 'N/A',
+        total: v.total || 0,
+        metodoPago: v.metodoPago || 'Efectivo',
+        estado: v.estado === 'Cancelada' ? 'Anulada' : (v.estado || 'Completada'),
+        productos: productosMapeados,
+        isActive: v.estado !== 'Cancelada'
+      };
+    });
+    setVentas(ventasMapeadas);
   }, []);
-  
+
   const showAlert = useCallback((message, type = 'success') => {
     setAlert({ show: true, message, type });
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 3000);
   }, []);
-  
+
+  const handleFieldChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
   const openModal = useCallback((mode = 'create', venta = null) => {
     if (venta && venta.estado === 'Anulada' && mode !== 'view') {
       showAlert('Las ventas anuladas solo pueden ser vistas.', 'error');
@@ -268,282 +609,111 @@ const VentasPage = () => {
     }
     setModalState({ isOpen: true, mode, venta });
     setErrors({});
-    const mapP = (prods) => prods.map(p => ({ ...p, _tempKey: Math.random(), precio: p.precio.toString() }));
     if (venta && mode !== 'create') {
-      const clienteValue = typeof venta.cliente === 'object' ? venta.cliente?.nombre : venta.cliente;
-      setNuevaVenta({
-        cliente: clienteValue,
-        metodoPago: venta.metodoPago,
-        fecha: venta.fecha,
-        productos: mapP(venta.productos),
-        estado: venta.estado
+      const productosMapeados = venta.productos?.map(p => ({
+        ...p,
+        _tempKey: Math.random(),
+        precio: p.precio?.toString() || '0',
+        nombre: typeof p.nombre === 'object' ? (p.nombre.nombre || 'Producto') : (p.nombre || 'Producto')
+      })) || [];
+      setFormData({
+        cliente: venta.cliente || '',
+        metodoPago: venta.metodoPago || 'Efectivo',
+        fecha: venta.fecha || new Date().toLocaleDateString('es-CO'),
+        productos: productosMapeados.length ? productosMapeados : [{ id: '', nombre: '', talla: '', cantidad: '', precio: '', _tempKey: Math.random() }],
+        estado: venta.estado || 'Completada'
       });
     } else {
-      setNuevaVenta({
+      // Reset form inline instead of using resetForm function
+      setFormData({
         cliente: '',
         metodoPago: 'Efectivo',
         fecha: new Date().toLocaleDateString('es-CO'),
-        productos: [{ id: '', nombre: '', talla: '', cantidad: 1, precio: '', _tempKey: Math.random() }],
+        productos: [{ id: '', nombre: '', talla: '', cantidad: '', precio: '', _tempKey: Date.now() + Math.random() }],
         estado: 'Completada'
       });
+      setErrors({});
     }
   }, [showAlert]);
-  
-  const closeModal = useCallback(() => setModalState({ isOpen: false, mode: 'view', venta: null }), []);
-  
-  const agregarProducto = () => setNuevaVenta(p => ({
+
+  const closeModal = useCallback(() => {
+    setModalState({ isOpen: false, mode: 'view', venta: null });
+  }, []);
+
+  const agregarProducto = () => setFormData(p => ({
     ...p,
-    productos: [...p.productos, { id: '', nombre: '', talla: '', cantidad: 1, precio: '', _tempKey: Math.random() }]
+    productos: [...p.productos, { id: '', nombre: '', talla: '', cantidad: '', precio: '', _tempKey: Math.random() }]
   }));
-  
-  const actualizarProducto = (index, campo, valor) => setNuevaVenta(p => {
-    const n = [...p.productos];
-    n[index] = { ...n[index], [campo]: valor };
-    return { ...p, productos: n };
+
+  const actualizarProducto = (index, campo, valor) => setFormData(p => {
+    const nuevos = [...p.productos];
+    nuevos[index] = { ...nuevos[index], [campo]: valor };
+    return { ...p, productos: nuevos };
   });
-  
+
   const eliminarProducto = (index) => {
-    if (nuevaVenta.productos.length > 1) {
-      setNuevaVenta(p => ({ ...p, productos: p.productos.filter((_, i) => i !== index) }));
+    if (formData.productos.length > 1) {
+      setFormData(p => ({ ...p, productos: p.productos.filter((_, i) => i !== index) }));
     }
   };
-  
-  const calcularTotal = () => nuevaVenta.productos.reduce((t, p) => t + (p.cantidad * (parseFloat(p.precio) || 0)), 0);
-  
+
+  const calcularTotal = () => formData.productos.reduce((t, p) => {
+    const qty = p.cantidad || 0;
+    const price = parseFloat(p.precio) || 0;
+    return t + (qty > 0 ? qty * price : 0);
+  }, 0);
+
   const validar = () => {
     const e = {};
-    if (!nuevaVenta.cliente) e.cliente = 'Requerido';
-    nuevaVenta.productos.forEach((p, i) => {
-      if (!p.id) e[`producto_id_${i}`] = 'Seleccione producto';
-      if (!p.precio || p.precio <= 0) e[`producto_precio_${i}`] = 'Inválido';
+    if (!formData.cliente) e.cliente = 'Requerido';
+    if (!formData.fecha) e.fecha = 'Requerido';
+    formData.productos.forEach((p, i) => {
+      if (!p.id) e[`producto_${i}`] = 'Seleccione producto';
+      if (!p.cantidad || p.cantidad <= 0) e[`cantidad_${i}`] = 'Cantidad inválida';
     });
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-  
+
   const handleCreateVenta = () => {
     if (!validar()) return;
-    const data = { ...nuevaVenta, id: `#${ventas.length + 1}`, total: calcularTotal(), metodoPago: nuevaVenta.metodoPago };
+    const data = {
+      ...formData,
+      id: `#${ventas.length + 1}`,
+      total: calcularTotal()
+    };
     setVentas(prev => [...prev, data]);
-    showAlert('Venta registrada');
+    showAlert('Venta registrada correctamente');
     closeModal();
   };
-  
+
   const handleEditVenta = () => {
     if (!validar()) return;
     setVentas(prev => prev.map(v =>
       v.id === modalState.venta.id
-        ? { ...v, ...nuevaVenta, total: calcularTotal(), metodoPago: nuevaVenta.metodoPago }
+        ? { ...v, ...formData, total: calcularTotal() }
         : v
     ));
-    showAlert('Venta actualizada');
+    showAlert('Venta actualizada correctamente');
     closeModal();
   };
-  
+
   const handleAnularVenta = () => {
     setVentas(prev => prev.map(v =>
       v.id === anularModal.venta.id
         ? { ...v, estado: 'Anulada', isActive: false }
         : v
     ));
-    showAlert('Venta anulada');
+    showAlert('Venta anulada correctamente');
     setAnularModal({ isOpen: false, venta: null });
   };
-  
+
   const filtered = ventas.filter(v => {
-    const clienteName = typeof v.cliente === 'object' ? v.cliente?.nombre : v.cliente;
-    const search = (clienteName + v.id).toLowerCase().includes(searchTerm.toLowerCase());
-    const status = filterStatus === 'Todos' || v.estado.startsWith(filterStatus.slice(0, -1));
+    const search = ((v.cliente || '') + (v.id || '')).toLowerCase().includes((searchTerm || '').toLowerCase());
+    const status = filterStatus === 'Todos' || (v.estado || '').startsWith(filterStatus.slice(0, -1));
     return search && status;
   });
-  
-  const renderModalContent = () => {
-    const isView = modalState.mode === 'view';
-    const isEdit = modalState.mode === 'edit';
-    const total = calcularTotal();
-    
-    if (isView) {
-      const clienteDisplay = typeof modalState.venta?.cliente === 'object' ? modalState.venta.cliente?.nombre : modalState.venta?.cliente;
-      const ventaTotal = modalState.venta?.productos?.reduce((sum, p) => sum + (p.cantidad * (parseFloat(p.precio) || 0)), 0) || 0;
-      
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 2 }}>
-              <FormField label="Cliente">
-                <div style={{ backgroundColor: "#0a0a0a", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#f1f5f9", fontSize: "13px" }}>
-                  {clienteDisplay || 'N/A'}
-                </div>
-              </FormField>
-            </div>
-            <div style={{ flex: 1 }}>
-              <FormField label="Estado">
-                <div style={{ backgroundColor: "#0a0a0a", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#f1f5f9", fontSize: "13px" }}>
-                  {modalState.venta?.estado || 'N/A'}
-                </div>
-              </FormField>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              <FormField label="Método de Pago">
-                <div style={{ backgroundColor: "#0a0a0a", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#f1f5f9", fontSize: "13px" }}>
-                  {modalState.venta?.metodoPago || 'N/A'}
-                </div>
-              </FormField>
-            </div>
-            <div style={{ flex: 1 }}>
-              <FormField label="Fecha">
-                <div style={{ backgroundColor: "#0a0a0a", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#f1f5f9", fontSize: "13px" }}>
-                  {modalState.venta?.fecha || 'N/A'}
-                </div>
-              </FormField>
-            </div>
-          </div>
-          <div>
-            <FormField label="Productos">
-              <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                {modalState.venta?.productos?.map((p, i) => (
-                  <ProductoForm key={i} producto={p} isViewMode={true} />
-                ))}
-              </div>
-            </FormField>
-          </div>
-          <div style={{ marginTop: '16px', paddingTop: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#F5C81B', fontWeight: '700', fontSize: '16px' }}>
-                Total: ${ventaTotal.toLocaleString('es-CO')}
-              </span>
-              <button onClick={closeModal} style={{
-                background: 'transparent', border: '1px solid #94a3b8', color: '#94a3b8',
-                padding: '6px 16px', borderRadius: '4px', fontSize: '13px', cursor: 'pointer'
-              }}>
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
 
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <FormField label="Cliente" required error={errors.cliente}>
-          <select 
-            value={nuevaVenta.cliente} 
-            onChange={(e) => setNuevaVenta(p => ({...p, cliente: e.target.value}))} 
-            style={{
-              width: '100%', background: '#0a0a0a', color: '#fff', 
-              border: errors.cliente ? '1px solid #ef4444' : '1px solid #334155',
-              height: '36px', borderRadius: '4px', padding: '0 8px', fontSize: '13px'
-            }}
-          >
-            <option value="">Seleccionar cliente</option>
-            {clientesActivos.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
-          </select>
-        </FormField>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {isEdit && (
-            <div style={{ flex: 1 }}>
-              <FormField label="Estado">
-                <select 
-                  value={nuevaVenta.estado} 
-                  onChange={(e) => setNuevaVenta(p => ({...p, estado: e.target.value}))} 
-                  style={{
-                    width: '100%', background: '#0a0a0a', color: '#fff', border: '1px solid #334155',
-                    height: '36px', borderRadius: '4px', padding: '0 8px', fontSize: '13px'
-                  }}
-                >
-                  <option value="Completada">Completada</option>
-                  <option value="Anulada">Anulada</option>
-                </select>
-              </FormField>
-            </div>
-          )}
-          <div style={{ flex: 1 }}>
-            <FormField label="Método de Pago">
-              <select 
-                value={nuevaVenta.metodoPago} 
-                onChange={(e) => setNuevaVenta(p => ({...p, metodoPago: e.target.value}))} 
-                style={{
-                  width: '100%', background: '#0a0a0a', color: '#fff', border: '1px solid #334155',
-                  height: '36px', borderRadius: '4px', padding: '0 8px', fontSize: '13px'
-                }}
-              >
-                {paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </FormField>
-          </div>
-          <div style={{ flex: 1 }}>
-            <FormField label="Fecha" required error={errors.fecha}>
-              <DateInputWithCalendar 
-                value={nuevaVenta.fecha} 
-                onChange={(d) => setNuevaVenta(p => ({...p, fecha: d}))} 
-                inputStyle={{
-                  border: '1px solid #334155', backgroundColor: '#0a0a0a', color: '#fff',
-                  borderRadius: '4px', height: '36px', padding: '0 8px', fontSize: '13px', width: '100%'
-                }}
-              />
-            </FormField>
-          </div>
-        </div>
-
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <label style={{ fontSize: '12px', color: '#e2e8f0' }}>Productos</label>
-            <button 
-              onClick={agregarProducto}
-              style={{
-                background: 'transparent', 
-                color: '#F5C81B', 
-                border: '1px solid #F5C81B', 
-                fontSize: '11px', 
-                padding: '4px 8px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              + Agregar
-            </button>
-          </div>
-          {nuevaVenta.productos.map((p, i) => (
-            <ProductoForm 
-              key={p._tempKey} 
-              producto={p} 
-              index={i} 
-              onChange={actualizarProducto} 
-              onRemove={eliminarProducto} 
-              isFirst={i === 0} 
-            />
-          ))}
-        </div>
-
-        <div style={{ marginTop: 'auto', paddingTop: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#F5C81B', fontWeight: '700', fontSize: '16px' }}>
-              Total: ${total.toLocaleString('es-CO')}
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={closeModal} style={{
-                background: 'transparent', border: '1px solid #6B7280', color: '#D1D5DB',
-                padding: '6px 16px', borderRadius: '4px', fontSize: '13px', cursor: 'pointer'
-              }}>
-                Cancelar
-              </button>
-              <button onClick={modalState.mode === 'create' ? handleCreateVenta : handleEditVenta} style={{
-                background: 'transparent', border: '1px solid #F5C81B', color: '#F5C81B',
-                padding: '6px 16px', borderRadius: '4px', fontSize: '13px', cursor: 'pointer'
-              }}>
-                {modalState.mode === 'create' ? 'Guardar' : 'Actualizar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
   return (
     <>
       {alert.show && <Alert message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, show: false })} />}
@@ -560,9 +730,10 @@ const VentasPage = () => {
                 color: "#F5C81B", borderRadius: "4px", fontSize: "11px", cursor: "pointer",
                 whiteSpace: "nowrap", minWidth: "100px", fontWeight: "600",
                 display: "flex", alignItems: "center", gap: "3px", height: "35px",
+                transition: 'all 0.2s'
               }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = "#F5C81B"; e.target.style.color = "#000"; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = "transparent"; e.target.style.color = "#F5C81B"; }}
+                onMouseEnter={(e) => { e.target.style.backgroundColor = "#F5C81B"; e.target.style.color = "#000"; }}
+                onMouseLeave={(e) => { e.target.style.backgroundColor = "transparent"; e.target.style.color = "#F5C81B"; }}
               >
                 Registrar Venta
               </button>
@@ -589,18 +760,19 @@ const VentasPage = () => {
           border: '1px solid #F5C81B', overflow: 'hidden', backgroundColor: '#000',
         }}>
           <div style={{ flex: 1, overflow: 'auto' }}>
-            <EntityTable 
-              entities={filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)} 
-              columns={columns} 
-              onView={v => openModal('view', v)} 
-              onEdit={v => openModal('edit', v)} 
+            <EntityTable
+              entities={filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+              columns={columns}
+              onView={v => openModal('view', v)}
+              onEdit={v => openModal('edit', v)}
               onAnular={v => setAnularModal({ isOpen: true, venta: v })}
-              showAnularButton={true} 
-              moduleType="ventas" 
+              showAnularButton={true}
+              moduleType="ventas"
               style={{ border: 'none', borderRadius: '0' }}
               tableStyle={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               headerStyle={{
-                padding: '6px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px',
+                padding: '10px 4px',
+                textAlign: 'left', fontWeight: '600', fontSize: '11px',
                 color: '#F5C81B', borderBottom: '1px solid #F5C81B', backgroundColor: '#151822',
               }}
               rowStyle={{ border: 'none', backgroundColor: '#000', '&:hover': { backgroundColor: '#111111' } }}
@@ -611,14 +783,17 @@ const VentasPage = () => {
             padding: "8px 12px", backgroundColor: "#151822", borderTop: '1px solid #F5C81B',
             fontSize: "12px", color: "#e0e0e0", height: "48px", boxSizing: "border-box",
           }}>
-            <span>Mostrando {(filtered.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0)}–{Math.min(currentPage * itemsPerPage, filtered.length)} de {filtered.length} ventas</span>
+            Mostrando {(filtered.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0)}–{Math.min(currentPage * itemsPerPage, filtered.length)} de {filtered.length} ventas
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1} style={{
                 background: 'transparent', border: '1px solid #F5C81B',
                 color: currentPage === 1 ? '#6B7280' : '#F5C81B', padding: '6px 12px',
                 borderRadius: '6px', fontSize: '12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                fontWeight: '600', minWidth: '90px',
-              }}>‹ Anterior</button>
+                fontWeight: '600', minWidth: '90px', transition: 'all 0.2s'
+              }}
+                onMouseEnter={(e) => { if (currentPage > 1) { e.target.style.backgroundColor = '#F5C81B'; e.target.style.color = '#000'; } }}
+                onMouseLeave={(e) => { if (currentPage > 1) { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#F5C81B'; } }}
+              >‹ Anterior</button>
               <span style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', color: '#F5C81B', minWidth: '60px', textAlign: 'center' }}>
                 Página {currentPage} de {Math.ceil(filtered.length / itemsPerPage) || 1}
               </span>
@@ -627,44 +802,66 @@ const VentasPage = () => {
                 color: currentPage >= Math.ceil(filtered.length / itemsPerPage) ? '#6B7280' : '#F5C81B',
                 padding: '6px 12px', borderRadius: '6px', fontSize: '12px',
                 cursor: currentPage >= Math.ceil(filtered.length / itemsPerPage) ? 'not-allowed' : 'pointer',
-                fontWeight: '600', minWidth: '90px',
-              }}>Siguiente ›</button>
+                fontWeight: '600', minWidth: '90px', transition: 'all 0.2s'
+              }}
+                onMouseEnter={(e) => { if (currentPage < Math.ceil(filtered.length / itemsPerPage)) { e.target.style.backgroundColor = '#F5C81B'; e.target.style.color = '#000'; } }}
+                onMouseLeave={(e) => { if (currentPage < Math.ceil(filtered.length / itemsPerPage)) { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#F5C81B'; } }}
+              >Siguiente ›</button>
             </div>
           </div>
         </div>
+        <UniversalModal
+          isOpen={modalState.isOpen} onClose={closeModal}
+          title={modalState.mode === 'create' ? 'Registrar Venta' : modalState.mode === 'edit' ? 'Editar Venta' : 'Detalles de la Venta'}
+          subtitle={modalState.mode === 'create' ? 'Complete la información' : modalState.mode === 'edit' ? 'Modifique la información' : 'Información detallada'}
+          showActions={false}
+          customStyles={{
+            overlay: { backgroundColor: 'rgba(0, 0, 0, 0.85)', zIndex: 1000 },
+            content: {
+              padding: '16px',
+              backgroundColor: '#000000',
+              border: '1px solid #F5C81B',
+              borderRadius: '8px',
+              maxWidth: '400px',
+              width: '95%',
+              maxHeight: 'auto',
+              overflow: 'visible',
+              margin: '20px auto',
+              boxShadow: '0 4px 20px rgba(245, 200, 27, 0.1)',
+              position: 'relative',
+              top: '2%',
+              marginTop: '5px',
+              transform: 'none',
+            },
+            title: { color: '#F5C81B', fontSize: '16px', fontWeight: '600', marginBottom: '4px' },
+            subtitle: { color: '#9CA3AF', fontSize: '11px', marginBottom: '12px' }
+          }}
+        >
+          <VentasFormFields
+            modalState={modalState}
+            formData={formData}
+            errors={errors}
+            handleFieldChange={handleFieldChange}
+            handleSave={modalState.mode === 'create' ? handleCreateVenta : handleEditVenta}
+            agregarProducto={agregarProducto}
+            actualizarProducto={actualizarProducto}
+            eliminarProducto={eliminarProducto}
+            clientesActivos={clientesActivos}
+          />
+        </UniversalModal>
+        <AnularOperacionModal
+          isOpen={anularModal.isOpen} onClose={() => setAnularModal({ isOpen: false, venta: null })}
+          onConfirm={handleAnularVenta} operationType="venta" operationData={anularModal.venta}
+          customStyles={{
+            overlay: { backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1000 },
+            content: {
+              backgroundColor: '#000000', border: '1px solid #F5C81B', borderRadius: '6px',
+              padding: '20px', maxWidth: '400px', margin: 'auto',
+              boxShadow: '0 4px 20px rgba(245, 200, 27, 0.1)', opacity: '0.95'
+            }
+          }}
+        />
       </div>
-      <UniversalModal 
-        isOpen={modalState.isOpen} onClose={closeModal} 
-        title={modalState.mode === 'create' ? 'Registrar Venta' : modalState.mode === 'edit' ? 'Editar Venta' : 'Detalles de la Venta'}
-        subtitle={modalState.mode === 'create' ? 'Complete la información para registrar una nueva venta' : modalState.mode === 'edit' ? 'Modifique la información de la venta' : 'Información detallada de la venta'}
-        showActions={false}
-        customStyles={{
-          overlay: { backgroundColor: 'rgba(0, 0, 0, 0.85)', zIndex: 1000 },
-          content: { 
-            padding: '16px', backgroundColor: '#000000', border: '1px solid #F5C81B',
-            borderRadius: '6px', maxWidth: '480px', width: '90%', maxHeight: '85vh',
-            overflow: 'hidden', margin: 'auto', boxShadow: '0 4px 20px rgba(245, 200, 27, 0.1)',
-            display: 'flex', flexDirection: 'column',
-            position: 'relative'
-          },
-          title: { color: '#F5C81B', fontSize: '18px', fontWeight: '600', marginBottom: '4px' },
-          subtitle: { color: '#9CA3AF', fontSize: '13px', marginBottom: '16px' }
-        }}
-      >
-        {renderModalContent()}
-      </UniversalModal>
-      <AnularOperacionModal 
-        isOpen={anularModal.isOpen} onClose={() => setAnularModal({ isOpen: false, venta: null })} 
-        onConfirm={handleAnularVenta} operationType="venta" operationData={anularModal.venta}
-        customStyles={{
-          overlay: { backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1000 },
-          content: {
-            backgroundColor: '#000000', border: '1px solid #F5C81B', borderRadius: '6px',
-            padding: '20px', maxWidth: '400px', margin: 'auto',
-            boxShadow: '0 4px 20px rgba(245, 200, 27, 0.1)', opacity: '0.95'
-          }
-        }}
-      />
     </>
   );
 };

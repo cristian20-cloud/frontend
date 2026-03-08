@@ -1,3 +1,4 @@
+// src/pages/admin/ClientesPage.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { initialCustomers } from '../../data';
 import EntityTable from '../../components/EntityTable';
@@ -6,6 +7,415 @@ import SearchInput from '../../components/SearchInput';
 import UniversalModal from '../../components/UniversalModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
+// =========================
+// COMPONENTE DE FORMULARIO - MOVIDO AFUERA PARA EVITAR RE-MOUNTS
+// =========================
+const ClienteFormFields = ({
+  modalState,
+  formData,
+  errors,
+  handleInputChange,
+  handleSave,
+  closeModal,
+  departamentos,
+  ciudades,
+  loadingCities,
+  firstInputRef
+}) => {
+  const isView = modalState.mode === 'view';
+  const isEdit = modalState.mode === 'edit';
+
+  const inputStyleEdit = {
+    backgroundColor: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: "6px",
+    padding: "4px 8px",
+    color: "#f1f5f9",
+    fontSize: "12px",
+    height: "28px",
+    width: "100%",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
+  if (isView) {
+    const cliente = modalState.cliente;
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ flex: 1 }}>
+            <div>
+              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Tipo Documento:</label>
+              <div style={inputStyleEdit}>
+                {cliente?.tipoDocumento || 'N/A'}
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div>
+              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Número Documento:</label>
+              <div style={inputStyleEdit}>
+                {cliente?.numeroDocumento || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Nombre Completo:</label>
+          <div style={inputStyleEdit}>
+            {cliente?.nombreCompleto || 'N/A'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ flex: 1 }}>
+            <div>
+              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Email:</label>
+              <div style={inputStyleEdit}>
+                {cliente?.email || 'N/A'}
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div>
+              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Teléfono:</label>
+              <div style={inputStyleEdit}>
+                {cliente?.telefono || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Dirección:</label>
+          <div style={inputStyleEdit}>
+            {cliente?.direccion || 'N/A'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ flex: 1 }}>
+            <div>
+              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Departamento:</label>
+              <div style={inputStyleEdit}>
+                {cliente?.departamento || 'N/A'}
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div>
+              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Ciudad:</label>
+              <div style={inputStyleEdit}>
+                {cliente?.ciudad || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const renderEditableField = (label, fieldName, type = "text", options = []) => {
+    const isError = errors[fieldName];
+    const hasValue = formData[fieldName] && formData[fieldName] !== '';
+    
+    const inputStyle = {
+      backgroundColor: isError ? "#451a1a" : "#1e293b",
+      border: `1px solid ${isError ? "#ef4444" : "#334155"}`,
+      borderRadius: "6px",
+      padding: "4px 8px",
+      color: "#f1f5f9",
+      fontSize: "12px",
+      height: "28px",
+      width: "100%",
+      outline: "none",
+      boxSizing: "border-box",
+      fontFamily: "inherit",
+    };
+
+    const selectStyle = {
+      ...inputStyle,
+      cursor: 'pointer',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+    };
+
+    const webkitScrollbarStyle = `
+      select::-webkit-scrollbar {
+        display: none;
+      }
+    `;
+
+    const selectOptionsStyle = `
+      select option {
+        background-color: #1e293b;
+        color: #f1f5f9;
+        padding: 8px;
+      }
+      select option:disabled {
+        color: #6B7280;
+        font-style: italic;
+      }
+    `;
+
+    if (type === 'select') {
+      let fieldOptions = options;
+      if (fieldName === 'department') {
+        fieldOptions = departamentos.map(d => ({ value: d.id, label: d.name }));
+      } else if (fieldName === 'city') {
+        fieldOptions = ciudades.map(c => ({ value: c.id, label: c.name }));
+      } else if (fieldName === 'documentType') {
+        fieldOptions = [
+          { value: 'Cédula de ciudadanía', label: 'Cédula de ciudadanía' },
+          { value: 'NIT', label: 'NIT' },
+          { value: 'Otro', label: 'Otro' },
+          { value: 'Pasaporte', label: 'Pasaporte' },
+          { value: 'Tarjeta de identidad', label: 'Tarjeta de identidad' },
+        ];
+      }
+
+      return (
+        <div>
+          <style>{webkitScrollbarStyle}</style>
+          <style>{selectOptionsStyle}</style>
+          <label style={{ fontSize: "11px", color: "#e2e8f0", fontWeight: "500", marginBottom: "3px", display: "block" }}>
+            {label}: <span style={{ color: "#ef4444" }}>*</span>
+          </label>
+          <select
+            value={formData[fieldName] || ''}
+            onChange={(e) => handleInputChange(fieldName, e.target.value)}
+            disabled={fieldName === 'city' && (loadingCities || !formData.department)}
+            style={selectStyle}
+          >
+            {!hasValue && (
+              <option value="" disabled selected style={{ color: '#6B7280', fontStyle: 'italic' }}>Seleccionar...</option>
+            )}
+            {fieldOptions.map(op => (
+              <option key={op.value} value={op.value} style={{ color: '#f1f5f9', backgroundColor: '#1e293b' }}>{op.label}</option>
+            ))}
+          </select>
+          {isError && (
+            <div style={{ color: "#f87171", fontSize: "10px", fontWeight: "500", marginTop: "2px" }}>
+              {isError}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const isNumericField = fieldName === 'documentNumber' || fieldName === 'phone';
+    
+    return (
+      <div>
+        <label style={{ fontSize: "11px", color: "#e2e8f0", fontWeight: "500", marginBottom: "3px", display: "block" }}>
+          {label}: <span style={{ color: "#ef4444" }}>*</span>
+        </label>
+        <input
+          type={isNumericField ? "tel" : type}
+          inputMode={isNumericField ? "numeric" : undefined}
+          pattern={isNumericField ? "[0-9]*" : undefined}
+          value={formData[fieldName] || ''}
+          onChange={(e) => handleInputChange(fieldName, e.target.value)}
+          ref={fieldName === 'documentNumber' ? firstInputRef : null}
+          style={inputStyle}
+        />
+        {isError && (
+          <div style={{ color: "#f87171", fontSize: "10px", fontWeight: "500", marginTop: "2px" }}>
+            {isError}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (isEdit) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '8px',
+        maxWidth: '100%',
+      }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 1 }}>
+            {renderEditableField('Tipo Documento', 'documentType', 'select')}
+          </div>
+          <div style={{ flex: 1 }}>
+            {renderEditableField('Número Documento', 'documentNumber', 'text')}
+          </div>
+        </div>
+
+        <div>{renderEditableField('Nombre Completo', 'fullName', 'text')}</div>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 1 }}>{renderEditableField('Email', 'email', 'text')}</div>
+          <div style={{ flex: 1 }}>{renderEditableField('Teléfono', 'phone', 'text')}</div>
+        </div>
+
+        <div>{renderEditableField('Dirección', 'address', 'text')}</div>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 1 }}>{renderEditableField('Departamento', 'department', 'select')}</div>
+          <div style={{ flex: 1 }}>{renderEditableField('Ciudad', 'city', 'select')}</div>
+        </div>
+
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          gap: '6px',
+          marginTop: '6px'
+        }}>
+          <button
+            onClick={closeModal}
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid #94a3b8',
+              color: '#94a3b8',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              fontSize: "11px",
+              fontWeight: '500',
+              cursor: 'pointer',
+              minWidth: '70px', 
+              height: '28px',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#94a3b8';
+              e.currentTarget.style.color = '#000';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#94a3b8';
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            style={{
+              backgroundColor: '#F5C81B',
+              border: 'none',
+              color: '#0f172a',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              fontSize: "11px",
+              fontWeight: '600',
+              cursor: 'pointer',
+              minWidth: '80px',
+              height: '28px',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f5d33c';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F5C81B';
+            }}
+          >
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: '8px',
+      maxWidth: '100%',
+    }}>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1 }}>
+          {renderEditableField('Tipo Documento', 'documentType', 'select')}
+        </div>
+        <div style={{ flex: 1 }}>
+          {renderEditableField('Número Documento', 'documentNumber', 'text')}
+        </div>
+      </div>
+
+      <div>{renderEditableField('Nombre Completo', 'fullName', 'text')}</div>
+
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1 }}>{renderEditableField('Email', 'email', 'text')}</div>
+        <div style={{ flex: 1 }}>{renderEditableField('Teléfono', 'phone', 'text')}</div>
+      </div>
+
+      <div>{renderEditableField('Dirección', 'address', 'text')}</div>
+
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1 }}>{renderEditableField('Departamento', 'department', 'select')}</div>
+        <div style={{ flex: 1 }}>{renderEditableField('Ciudad', 'city', 'select')}</div>
+      </div>
+
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'flex-end', 
+        gap: '6px',
+        marginTop: '6px'
+      }}>
+        <button
+          onClick={closeModal}
+          style={{
+            backgroundColor: 'transparent',
+            border: '1px solid #94a3b8',
+            color: '#94a3b8',
+            padding: '4px 12px',
+            borderRadius: '4px',
+            fontSize: "11px",
+            fontWeight: '500',
+            cursor: 'pointer',
+            minWidth: '70px', 
+            height: '28px',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#94a3b8';
+            e.currentTarget.style.color = '#000';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = '#94a3b8';
+          }}
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleSave}
+          style={{
+            backgroundColor: '#F5C81B',
+            border: 'none',
+            color: '#0f172a',
+            padding: '4px 12px',
+            borderRadius: '4px',
+            fontSize: "11px",
+            fontWeight: '600',
+            cursor: 'pointer',
+            minWidth: '80px',
+            height: '28px',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#f5d33c';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#F5C81B';
+          }}
+        >
+          Guardar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// =========================
+// COMPONENTE PRINCIPAL
+// =========================
 const ClientesPage = () => {
 // =========================
 // ESTADOS
@@ -25,7 +435,7 @@ const [modalState, setModalState] = useState({
   cliente: null
 });
 const [formData, setFormData] = useState({
-  documentType: 'Cédula de Identidad',
+  documentType: '',
   documentNumber: '',
   fullName: '',
   email: '',
@@ -70,7 +480,7 @@ const showingStart = filtered.length > 0 ? startIndex + 1 : 0;
 useEffect(() => {
   const fetchDepartamentos = async () => {
     try {
-      const res = await fetch('https://api-colombia.com/api/v1/Department');
+      const res = await fetch('https://api-colombia.com/api/v1/Department  ');
       const data = await res.json();
       setDepartamentos(data.sort((a, b) => a.name.localeCompare(b.name)));
     } catch {
@@ -83,7 +493,7 @@ useEffect(() => {
 useEffect(() => {
   const mapped = initialCustomers.map((c, i) => ({
     id: c.Correo || `cliente-${i}`,
-    tipoDocumento: 'Cédula de Identidad',
+    tipoDocumento: 'Cédula de ciudadanía',
     numeroDocumento: `${i + 10000000}`,
     nombreCompleto: c.Nombre,
     email: c.Correo,
@@ -139,9 +549,10 @@ const loadCitiesByDepartment = async (deptId) => {
   }
   setLoadingCities(true);
   try {
-    const res = await fetch(`https://api-colombia.com/api/v1/City?departmentId=${deptId}`);
+    const res = await fetch(`https://api-colombia.com/api/v1/City?departmentId=  ${deptId}`);
     const data = await res.json();
-    setCiudades(data.sort((a, b) => a.name.localeCompare(b.name)));
+    const ciudadesFiltradas = data.filter(city => city.departmentId === parseInt(deptId));
+    setCiudades(ciudadesFiltradas.sort((a, b) => a.name.localeCompare(b.name)));
   } catch {
     showAlert('Error cargando ciudades', 'error');
   }
@@ -157,7 +568,9 @@ const openModal = (mode = 'create', cliente = null) => {
   
   if (cliente && (mode === 'edit' || mode === 'view')) {
     const dept = departamentos.find(d => d.name === cliente.departamento);
-    if (dept) loadCitiesByDepartment(dept.id);
+    if (dept) {
+      loadCitiesByDepartment(dept.id);
+    }
 
     setFormData({
       documentType: cliente.tipoDocumento,
@@ -172,7 +585,7 @@ const openModal = (mode = 'create', cliente = null) => {
     });
   } else {
     setFormData({
-      documentType: 'Cédula de Identidad',
+      documentType: '',
       documentNumber: '',
       fullName: '',
       email: '',
@@ -189,7 +602,7 @@ const openModal = (mode = 'create', cliente = null) => {
 const closeModal = () => {
   setModalState({ isOpen: false, mode: 'view', cliente: null });
   setFormData({
-    documentType: 'Cédula de Identidad',
+    documentType: '',
     documentNumber: '',
     fullName: '',
     email: '',
@@ -204,13 +617,17 @@ const closeModal = () => {
 };
 
 // =========================
-// MANEJO DE FORMULARIO
+// MANEJO DE FORMULARIO - CON VALIDACIÓN NUMÉRICA
 // =========================
 const handleInputChange = (field, value) => {
   if (errors[field]) {
     const newErr = { ...errors };
     delete newErr[field];
     setErrors(newErr);
+  }
+  
+  if (field === 'documentNumber' || field === 'phone') {
+    value = value.replace(/[^0-9]/g, '');
   }
   
   if (field === 'department') {
@@ -223,7 +640,8 @@ const handleInputChange = (field, value) => {
 
 const handleSave = () => {
   const required = [
-    ['documentNumber', 'Número de documento'],
+    ['documentType', 'Tipo de documento'],
+    ['documentNumber', 'Número obligatorio'],
     ['fullName', 'Nombre completo'],
     ['email', 'Email'],
     ['phone', 'Teléfono'],
@@ -244,7 +662,8 @@ const handleSave = () => {
   setErrors(newErrors);
   
   if (Object.keys(newErrors).length > 0) {
-    showAlert('Complete los campos obligatorios correctamente', 'error');
+    // ✅ ALERTA CORREGIDA: Mensaje nuevo y tipo 'error' para rojo con X
+    showAlert('Debes llenar los campos correctamente', 'error');
     return;
   }
 
@@ -268,14 +687,14 @@ const handleSave = () => {
     setClientes(prev =>
       prev.map(c => (String(c.id) === String(modalState.cliente.id) ? { ...c, ...updatedCliente } : c))
     );
-    showAlert(`Cliente ${updatedCliente.nombreCompleto} actualizado correctamente`);
+    showAlert(`Cliente ${updatedCliente.nombreCompleto} actualizado correctamente`, 'success');
   } else {
     const newCliente = { 
       ...updatedCliente, 
       id: `cliente-${Date.now()}` 
     };
     setClientes(prev => [...prev, newCliente]);
-    showAlert(`Cliente ${updatedCliente.nombreCompleto} registrado correctamente`);
+    showAlert(`Cliente ${updatedCliente.nombreCompleto} registrado correctamente`, 'success');
   }
   
   closeModal();
@@ -284,6 +703,21 @@ const handleSave = () => {
 // =========================
 // FUNCIONES DE ACCIONES
 // =========================
+const handleToggleStatus = (cliente) => {
+  console.log('Toggle clicked for:', cliente);
+  
+  setClientes(prev => prev.map(c => 
+    c.id === cliente.id ? { ...c, isActive: !c.isActive } : c
+  ));
+  
+  const nuevoEstado = !cliente.isActive;
+  showAlert(`Cliente ${nuevoEstado ? 'activado' : 'desactivado'} correctamente`, 'success');
+  
+  if (modalState.isOpen && modalState.cliente && String(modalState.cliente.id) === String(cliente.id)) {
+    setFormData(prev => ({ ...prev, isActive: nuevoEstado }));
+  }
+};
+
 const openDeleteModal = (cliente) => {
   if (cliente.isActive) {
     showAlert(`No se puede eliminar el cliente "${cliente.nombreCompleto}" porque está activo. Desactívelo primero.`, 'error');
@@ -306,43 +740,6 @@ const handleDelete = () => {
   setClientes(prev => prev.filter(c => String(c.id) !== String(deleteModal.cliente.id)));
   showAlert('Cliente eliminado permanentemente', 'delete');
   closeDeleteModal();
-};
-
-const handleReactivar = (cliente) => {
-  setClientes(prev =>
-    prev.map(c =>
-      String(c.id) === String(cliente.id) ? { ...c, isActive: true } : c
-    )
-  );
-  showAlert(`Cliente "${cliente.nombreCompleto}" reactivado correctamente`, 'success');
-  // Actualizar formData si el modal está abierto
-  if (modalState.isOpen && modalState.cliente && String(modalState.cliente.id) === String(cliente.id)) {
-    setFormData(prev => ({ ...prev, isActive: true }));
-  }
-};
-
-const handleDesactivar = (cliente) => {
-  setClientes(prev =>
-    prev.map(c =>
-      String(c.id) === String(cliente.id) ? { ...c, isActive: false } : c
-    )
-  );
-  showAlert(`Cliente "${cliente.nombreCompleto}" desactivado`, 'error');
-  // Actualizar formData si el modal está abierto
-  if (modalState.isOpen && modalState.cliente && String(modalState.cliente.id) === String(cliente.id)) {
-    setFormData(prev => ({ ...prev, isActive: false }));
-  }
-};
-
-// Toggle handler para modo vista
-const handleToggleViewMode = () => {
-  if (modalState.cliente) {
-    if (formData.isActive) {
-      handleDesactivar(modalState.cliente);
-    } else {
-      handleReactivar(modalState.cliente);
-    }
-  }
 };
 
 // =========================
@@ -450,447 +847,30 @@ const ToggleSwitch = ({ value, onChange }) => {
     <div
       onClick={() => onChange(!value)}
       style={{
-        width: '36px',
-        height: '18px',
+        width: '44px',
+        height: '22px',
         backgroundColor: value ? '#10B981' : '#4B5563',
-        borderRadius: '9px',
+        borderRadius: '11px',
         position: 'relative',
         cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        display: 'inline-block'
+        transition: 'background-color 0.3s ease',
+        display: 'inline-block',
+        boxShadow: value ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none'
       }}
     >
       <div
         style={{
-          width: '14px',
-          height: '14px',
+          width: '18px',
+          height: '18px',
           backgroundColor: 'white',
           borderRadius: '50%',
           position: 'absolute',
           top: '2px',
-          left: value ? '20px' : '2px',
-          transition: 'left 0.2s',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+          left: value ? '24px' : '2px',
+          transition: 'left 0.3s ease, box-shadow 0.3s ease',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
         }}
       />
-    </div>
-  );
-};
-
-const ClienteFormFields = () => {
-  const isView = modalState.mode === 'view';
-  const isEdit = modalState.mode === 'edit';
-
-  // Input style más delgado para editar
-  const inputStyleEdit = {
-    backgroundColor: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "6px",
-    padding: "4px 8px",
-    color: "#f1f5f9",
-    fontSize: "12px",
-    height: "28px",
-    width: "100%",
-    outline: "none",
-    boxSizing: "border-box",
-  };
-
-  if (isView) {
-    const cliente = modalState.cliente;
-    
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ flex: 1 }}>
-            <div>
-              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Tipo Documento:</label>
-              <div style={inputStyleEdit}>
-                {cliente?.tipoDocumento || 'N/A'}
-              </div>
-            </div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div>
-              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Número Documento:</label>
-              <div style={inputStyleEdit}>
-                {cliente?.numeroDocumento || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Nombre Completo:</label>
-          <div style={inputStyleEdit}>
-            {cliente?.nombreCompleto || 'N/A'}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ flex: 1 }}>
-            <div>
-              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Email:</label>
-              <div style={inputStyleEdit}>
-                {cliente?.email || 'N/A'}
-              </div>
-            </div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div>
-              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Teléfono:</label>
-              <div style={inputStyleEdit}>
-                {cliente?.telefono || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Dirección:</label>
-          <div style={inputStyleEdit}>
-            {cliente?.direccion || 'N/A'}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ flex: 1 }}>
-            <div>
-              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Departamento:</label>
-              <div style={inputStyleEdit}>
-                {cliente?.departamento || 'N/A'}
-              </div>
-            </div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div>
-              <label style={{ fontSize: "11px", color: "#e2e8f0", display: "block", marginBottom: "3px" }}>Ciudad:</label>
-              <div style={inputStyleEdit}>
-                {cliente?.ciudad || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Toggle de estado abajo en Ver Detalles - FUNCIONAL */}
-        <div style={{ 
-          backgroundColor: "#1e293b",
-          border: "1px solid #334155",
-          borderRadius: "6px",
-          padding: "8px 10px",
-          marginTop: "4px"
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontSize: "11px", color: "#e2e8f0", fontWeight: "500" }}>
-              Estado:
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ToggleSwitch 
-                value={formData.isActive}
-                onChange={handleToggleViewMode}
-              />
-              <span style={{ color: formData.isActive ? '#10B981' : '#EF4444', fontSize: '11px', fontWeight: '500' }}>
-                {formData.isActive ? 'Activo' : 'Inactivo'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const renderEditableField = (label, fieldName, type = "text", options = []) => {
-    const isError = errors[fieldName];
-    
-    const inputStyle = {
-      backgroundColor: isError ? "#451a1a" : "#1e293b",
-      border: `1px solid ${isError ? "#ef4444" : "#334155"}`,
-      borderRadius: "6px",
-      padding: "4px 8px",
-      color: "#f1f5f9",
-      fontSize: "12px",
-      height: "28px",
-      width: "100%",
-      outline: "none",
-      boxSizing: "border-box",
-      fontFamily: "inherit",
-    };
-
-    const selectStyle = {
-      ...inputStyle,
-      cursor: 'pointer'
-    };
-
-    if (type === 'select') {
-      let fieldOptions = options;
-      if (fieldName === 'department') {
-        fieldOptions = departamentos.map(d => ({ value: d.id, label: d.name }));
-      } else if (fieldName === 'city') {
-        fieldOptions = ciudades.map(c => ({ value: c.id, label: c.name }));
-      } else if (fieldName === 'documentType') {
-        fieldOptions = [
-          { value: 'Cédula de Identidad', label: 'Cédula de Identidad' },
-          { value: 'Pasaporte', label: 'Pasaporte' },
-          { value: 'RUC', label: 'RUC' },
-        ];
-      }
-
-      return (
-        <div>
-          <label style={{ fontSize: "11px", color: "#e2e8f0", fontWeight: "500", marginBottom: "3px", display: "block" }}>
-            {label}: <span style={{ color: "#ef4444" }}>*</span>
-          </label>
-          <select
-            value={formData[fieldName] || ''}
-            onChange={(e) => handleInputChange(fieldName, e.target.value)}
-            disabled={fieldName === 'city' && loadingCities}
-            style={selectStyle}
-          >
-            <option value="">Seleccionar...</option>
-            {fieldOptions.map(op => (
-              <option key={op.value} value={op.value}>{op.label}</option>
-            ))}
-          </select>
-          {isError && (
-            <div style={{ color: "#f87171", fontSize: "10px", fontWeight: "500", marginTop: "2px" }}>
-              {isError}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <label style={{ fontSize: "11px", color: "#e2e8f0", fontWeight: "500", marginBottom: "3px", display: "block" }}>
-          {label}: <span style={{ color: "#ef4444" }}>*</span>
-        </label>
-        <input
-          type={type}
-          value={formData[fieldName] || ''}
-          onChange={(e) => handleInputChange(fieldName, e.target.value)}
-          ref={fieldName === 'documentNumber' ? firstInputRef : null}
-          style={inputStyle}
-        />
-        {isError && (
-          <div style={{ color: "#f87171", fontSize: "10px", fontWeight: "500", marginTop: "2px" }}>
-            {isError}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Para editar - toggle abajo
-  if (isEdit) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '8px',
-        maxWidth: '100%',
-      }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <div style={{ flex: 1 }}>
-            {renderEditableField('Tipo Documento', 'documentType', 'select')}
-          </div>
-          <div style={{ flex: 1 }}>
-            {renderEditableField('Número Documento', 'documentNumber', 'text')}
-          </div>
-        </div>
-
-        <div>{renderEditableField('Nombre Completo', 'fullName', 'text')}</div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <div style={{ flex: 1 }}>{renderEditableField('Email', 'email', 'text')}</div>
-          <div style={{ flex: 1 }}>{renderEditableField('Teléfono', 'phone', 'text')}</div>
-        </div>
-
-        <div>{renderEditableField('Dirección', 'address', 'text')}</div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <div style={{ flex: 1 }}>{renderEditableField('Departamento', 'department', 'select')}</div>
-          <div style={{ flex: 1 }}>{renderEditableField('Ciudad', 'city', 'select')}</div>
-        </div>
-
-        {/* Toggle de estado abajo en Editar */}
-        <div style={{ 
-          backgroundColor: "#1e293b",
-          border: "1px solid #334155",
-          borderRadius: "6px",
-          padding: "8px 10px",
-          marginTop: "4px"
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontSize: "11px", color: "#e2e8f0", fontWeight: "500" }}>
-              Estado:
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ToggleSwitch 
-                value={formData.isActive}
-                onChange={(newValue) => handleInputChange('isActive', newValue)}
-              />
-              <span style={{ color: formData.isActive ? '#10B981' : '#EF4444', fontSize: '11px', fontWeight: '500' }}>
-                {formData.isActive ? 'Activo' : 'Inactivo'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Botones */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          gap: '6px',
-          borderTop: '1px solid #334155', 
-          paddingTop: '10px',
-          marginTop: '6px'
-        }}>
-          <button
-            onClick={closeModal}
-            style={{
-              backgroundColor: 'transparent',
-              border: '1px solid #94a3b8',
-              color: '#94a3b8',
-              padding: '4px 12px',
-              borderRadius: '4px',
-              fontSize: '11px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              minWidth: '70px', 
-              height: '28px',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#94a3b8';
-              e.currentTarget.style.color = '#000';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#94a3b8';
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            style={{
-              backgroundColor: '#F5C81B',
-              border: 'none',
-              color: '#0f172a',
-              padding: '4px 12px',
-              borderRadius: '4px',
-              fontSize: '11px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              minWidth: '80px',
-              height: '28px',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f5d33c';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#F5C81B';
-            }}
-          >
-            Guardar Cambios
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Para crear
-  return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: '8px',
-      maxWidth: '100%',
-    }}>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <div style={{ flex: 1 }}>
-          {renderEditableField('Tipo Documento', 'documentType', 'select')}
-        </div>
-        <div style={{ flex: 1 }}>
-          {renderEditableField('Número Documento', 'documentNumber', 'text')}
-        </div>
-      </div>
-
-      <div>{renderEditableField('Nombre Completo', 'fullName', 'text')}</div>
-
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <div style={{ flex: 1 }}>{renderEditableField('Email', 'email', 'text')}</div>
-        <div style={{ flex: 1 }}>{renderEditableField('Teléfono', 'phone', 'text')}</div>
-      </div>
-
-      <div>{renderEditableField('Dirección', 'address', 'text')}</div>
-
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <div style={{ flex: 1 }}>{renderEditableField('Departamento', 'department', 'select')}</div>
-        <div style={{ flex: 1 }}>{renderEditableField('Ciudad', 'city', 'select')}</div>
-      </div>
-
-      {/* Botones para crear */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'flex-end', 
-        gap: '6px',
-        marginTop: '6px',
-        borderTop: '1px solid #334155',
-        paddingTop: '10px'
-      }}>
-        <button
-          onClick={closeModal}
-          style={{
-            backgroundColor: 'transparent',
-            border: '1px solid #94a3b8',
-            color: '#94a3b8',
-            padding: '4px 12px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            minWidth: '70px', 
-            height: '28px',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#94a3b8';
-            e.currentTarget.style.color = '#000';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#94a3b8';
-          }}
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleSave}
-          style={{
-            backgroundColor: '#F5C81B',
-            border: 'none',
-            color: '#0f172a',
-            padding: '4px 12px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            minWidth: '80px',
-            height: '28px',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f5d33c';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#F5C81B';
-          }}
-        >
-          Guardar
-        </button>
-      </div>
     </div>
   );
 };
@@ -902,29 +882,43 @@ const columns = [
   {
     header: 'Nombre',
     field: 'nombreCompleto',
-    render: (item) => <span style={{ color: '#fff' }}>{item.nombreCompleto}</span>
+    render: (item) => <span style={{ color: '#fff' }}>{item.nombreCompleto}</span>,
+    width: '200px'
   },
   {
     header: 'Email',
     field: 'email',
-    render: (item) => <span style={{ color: '#fff' }}>{item.email}</span>
+    render: (item) => <span style={{ color: '#fff' }}>{item.email}</span>,
+    width: '220px'
   },
   {
     header: 'Teléfono',
     field: 'telefono',
-    render: (item) => <span style={{ color: '#fff' }}>{item.telefono}</span>,
-    width: '120px'
+    render: (item) => <span style={{ 
+      color: '#fff', 
+      display: 'block',
+      fontFamily: 'monospace',
+      letterSpacing: '0.5px'
+    }}>{item.telefono}</span>,
+    width: '120px',
+    align: 'left'
   },
   {
     header: 'Ciudad',
     field: 'ciudad',
-    render: (item) => <span style={{ color: '#fff' }}>{item.ciudad}</span>
+    render: (item) => <span style={{ 
+      color: '#fff',
+      display: 'block' 
+    }}>{item.ciudad}</span>,
+    width: '120px',
+    align: 'left'
   },
   {
     header: 'Estado',
     field: 'isActive',
     render: (item) => <StatusPill status={item.isActive} />,
-    width: '100px'
+    width: '100px',
+    align: 'center'
   }
 ];
 
@@ -965,7 +959,7 @@ return (
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 minWidth: "100px",
-                fontWeight: "600",
+                fontWeight: '600',
                 display: "flex",
                 alignItems: "center",
                 gap: "3px",
@@ -1026,13 +1020,19 @@ return (
             columns={columns} 
             onView={c => openModal('view', c)} 
             onEdit={c => openModal('edit', c)} 
-            onAnular={handleDesactivar}
-            onReactivar={handleReactivar}
+            onAnular={handleToggleStatus}
+            onReactivar={handleToggleStatus}
             onDelete={openDeleteModal}
             showAnularButton={true}
             showDeleteButton={true}
             showReactivarButton={true}
             moduleType="clientes"
+            idField="id"
+            estadoField="isActive"
+            switchProps={{
+              activeColor: "#10b981",
+              inactiveColor: "#ef4444"
+            }}
             style={{
               border: 'none',
               borderRadius: '0',
@@ -1044,9 +1044,9 @@ return (
             }}
             headerStyle={{
               padding: '6px 4px',
-              textAlign: 'left',
+              textAlign: (col) => col.align || 'left',
               fontWeight: '600',
-              fontSize: '11px',
+              fontSize: "11px",
               color: '#F5C81B',
               borderBottom: '1px solid #F5C81B',
               backgroundColor: '#151822',
@@ -1086,7 +1086,7 @@ return (
                 color: currentPage === 1 ? '#6B7280' : '#F5C81B',
                 padding: '6px 12px',
                 borderRadius: '6px',
-                fontSize: '12px',
+                fontSize: "12px",
                 cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                 fontWeight: '600',
                 minWidth: '90px',
@@ -1096,7 +1096,7 @@ return (
             </button>
             <span style={{
               padding: '6px 12px',
-              fontSize: '12px',
+              fontSize: "12px",
               fontWeight: '600',
               color: '#F5C81B',
               minWidth: '60px',
@@ -1113,7 +1113,7 @@ return (
                 color: currentPage >= totalPages ? '#6B7280' : '#F5C81B',
                 padding: '6px 12px',
                 borderRadius: '6px',
-                fontSize: '12px',
+                fontSize: "12px",
                 cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
                 fontWeight: '600',
                 minWidth: '90px',
@@ -1159,18 +1159,29 @@ return (
         },
         title: {
           color: '#F5C81B',
-          fontSize: '16px',
+          fontSize: "16px",
           fontWeight: '600',
           marginBottom: '4px'
         },
         subtitle: {
           color: '#9CA3AF',
-          fontSize: '12px',
+          fontSize: "12px",
           marginBottom: '12px'
         }
       }}
     >
-      <ClienteFormFields />
+      <ClienteFormFields 
+        modalState={modalState}
+        formData={formData}
+        errors={errors}
+        handleInputChange={handleInputChange}
+        handleSave={handleSave}
+        closeModal={closeModal}
+        departamentos={departamentos}
+        ciudades={ciudades}
+        loadingCities={loadingCities}
+        firstInputRef={firstInputRef}
+      />
     </UniversalModal>
   
     <ConfirmDeleteModal 

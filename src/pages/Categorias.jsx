@@ -1,8 +1,7 @@
 // src/pages/Categorias.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { initialCategories } from '../data';
-
 import Footer from "../components/Footer";
 
 // Imágenes optimizadas para cada categoría
@@ -23,25 +22,46 @@ const imgPorCategoria = {
   "default": "https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1000&q=80",
 };
 
-const Categorias = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+const Categorias = ({ 
+  searchTerm: externalSearchTerm = '',
+  isSearching: externalIsSearching = false,
+  onSearch,
+  onClearSearch
+}) => {
+  const location = useLocation();
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
 
+  // Efecto para leer el parámetro q de la URL al cargar
   useEffect(() => {
-    const handleSearch = (event) => {
-      setSearchQuery(event.detail.query || '');
-    };
-    window.addEventListener('globalSearchFilter', handleSearch);
-    return () => window.removeEventListener('globalSearchFilter', handleSearch);
-  }, []);
+    const params = new URLSearchParams(location.search);
+    const queryParam = params.get('q');
+    if (queryParam) {
+      setLocalSearchTerm(queryParam);
+      if (onSearch) {
+        onSearch(queryParam);
+      }
+    }
+  }, [location.search, onSearch]);
+
+  // Sincronizar con el término externo cuando cambia
+  useEffect(() => {
+    if (externalSearchTerm !== localSearchTerm) {
+      setLocalSearchTerm(externalSearchTerm);
+    }
+  }, [externalSearchTerm]);
 
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return initialCategories;
-    const query = searchQuery.toLowerCase();
+    // Usar el término de búsqueda (priorizar el externo si existe)
+    const searchQuery = externalIsSearching ? externalSearchTerm : localSearchTerm;
+    
+    if (!searchQuery || !searchQuery.trim()) return initialCategories;
+    
+    const query = searchQuery.toLowerCase().trim();
     return initialCategories.filter(cat => 
       cat.Nombre.toLowerCase().includes(query) ||
-      cat.Descripcion?.toLowerCase().includes(query)
+      (cat.Descripcion && cat.Descripcion.toLowerCase().includes(query))
     );
-  }, [searchQuery]);
+  }, [localSearchTerm, externalSearchTerm, externalIsSearching]);
 
   const sortedCategories = useMemo(() => {
     return [...filteredCategories].sort((a, b) => {
@@ -50,6 +70,19 @@ const Categorias = () => {
       return 0;
     });
   }, [filteredCategories]);
+
+  const handleClearSearch = () => {
+    setLocalSearchTerm('');
+    if (onClearSearch) {
+      onClearSearch();
+    }
+    // Limpiar el parámetro de la URL
+    window.history.replaceState({}, '', '/categorias');
+  };
+
+  // Determinar si estamos en modo búsqueda
+  const isSearchActive = externalIsSearching || localSearchTerm.trim() !== '';
+  const activeSearchTerm = externalIsSearching ? externalSearchTerm : localSearchTerm;
 
   return (
     <div style={{ background: "#030712", minHeight: "100vh" }}>
@@ -115,19 +148,55 @@ const Categorias = () => {
         />
       </section>
 
-      {searchQuery && (
+      {/* RESULTADOS DE BÚSQUEDA */}
+      {isSearchActive && (
         <div style={{
-          textAlign: 'center',
-          padding: '12px',
-          backgroundColor: 'rgba(255, 193, 7, 0.1)',
-          color: '#FFC107',
-          fontSize: '1.1rem',
-          fontWeight: 'bold',
-          margin: '0 auto',
           maxWidth: '1200px',
-          marginBottom: '20px'
+          margin: '20px auto',
+          padding: '0 20px'
         }}>
-          Buscando: {searchQuery}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            padding: '15px',
+            background: 'rgba(255, 193, 7, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 193, 7, 0.2)'
+          }}>
+            <div>
+              <h2 style={{ color: '#FFC107', fontSize: '1.2rem', margin: '0 0 5px 0' }}>
+                Resultados para: &quot;{activeSearchTerm}&quot;
+              </h2>
+              <p style={{ color: '#94A3B8', fontSize: '0.9rem', margin: 0 }}>
+                {filteredCategories.length} {filteredCategories.length === 1 ? 'categoría encontrada' : 'categorías encontradas'}
+              </p>
+            </div>
+            <button
+              onClick={handleClearSearch}
+              style={{
+                background: 'none',
+                border: '1px solid #FFC107',
+                color: '#FFC107',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#FFC107';
+                e.target.style.color = '#000';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'none';
+                e.target.style.color = '#FFC107';
+              }}
+            >
+              Limpiar búsqueda
+            </button>
+          </div>
         </div>
       )}
 
@@ -141,6 +210,7 @@ const Categorias = () => {
                 to={`/productos?categoria=${encodeURIComponent(cat.Nombre)}`}
                 key={i}
                 className={`categoria-card ${cat.Nombre.toLowerCase() === "camisetas" ? "camisetas-card" : ""}`}
+                onClick={handleClearSearch}
               >
                 <img
                   src={imgUrl}
@@ -151,11 +221,12 @@ const Categorias = () => {
                   }}
                 />
 
-                {/* CAPA DE FONDO OSCURO EN LA PARTE INFERIOR */}
-                <div className="categoria-name-container">
-                  <div className="categoria-name-content">
-                    <h3 className="categoria-name">{cat.Nombre}</h3>
-                  </div>
+                {/* CONTENEDOR DEL NOMBRE Y DESCRIPCIÓN - SIN SOMBRA */}
+                <div className="categoria-info-container">
+                  <h3 className="categoria-name">{cat.Nombre}</h3>
+                  {cat.Descripcion && (
+                    <p className="categoria-description">{cat.Descripcion}</p>
+                  )}
                 </div>
               </Link>
             );
@@ -168,7 +239,7 @@ const Categorias = () => {
             gridColumn: '1 / -1',
             padding: '40px'
           }}>
-            No se encontraron categorías que coincidan con {searchQuery}.
+            No se encontraron categorías que coincidan con &quot;{activeSearchTerm}&quot;.
           </div>
         )}
       </div>
@@ -219,49 +290,63 @@ const Categorias = () => {
           transform: scale(1.05);
         }
 
-        /* CONTENEDOR DEL NOMBRE */
-        .categoria-name-container {
+        /* CONTENEDOR DE INFORMACIÓN - CENTRADO Y SIN SOMBRA */
+        .categoria-info-container {
           position: absolute;
           bottom: 0;
           left: 0;
-          width: 100%;
-          background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%);
-          padding: 15px 10px 10px;
+          right: 0;
+          background: linear-gradient(to top, 
+            rgba(0, 0, 0, 0.95) 0%, 
+            rgba(0, 0, 0, 0.8) 50%, 
+            transparent 100%);
+          padding: 30px 15px 20px;
           z-index: 1;
           border-bottom-left-radius: 12px;
           border-bottom-right-radius: 12px;
           transition: all 0.3s ease;
-        }
-
-        .categoria-name-content {
           text-align: center;
-          color: white;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
         }
 
         .categoria-name {
-          font-size: 1.2rem;
-          font-weight: 800;
-          margin: 0 0 6px 0;
-          color: #FFC71E;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+          font-size: 1.4rem;
+          font-weight: 700;
+          margin: 0 0 10px 0;
+          color: #FFC107;
           line-height: 1.2;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          padding: 0 5px;
           letter-spacing: 0.5px;
           text-transform: uppercase;
           font-family: 'Inter', sans-serif;
-          border: 2px solid #FFC71E;
-          border-radius: 6px;
-          padding: 4px 10px;
-          background: rgba(0, 0, 0, 0.7);
-          display: inline-block;
+          width: 100%;
+          text-align: center;
+          /* SIN SOMBRA - eliminado text-shadow */
         }
 
-        .categoria-card:hover .categoria-name-container {
-          opacity: 0.8;
-          transform: translateY(3px);
+        .categoria-description {
+          font-size: 0.9rem;
+          color: rgba(255, 255, 255, 0.9);
+          margin: 0;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          max-width: 90%;
+          margin: 0 auto;
+          text-align: center;
+          /* SIN SOMBRA - eliminado text-shadow */
+        }
+
+        .categoria-card:hover .categoria-info-container {
+          background: linear-gradient(to top, 
+            rgba(0, 0, 0, 0.98) 0%, 
+            rgba(0, 0, 0, 0.9) 50%, 
+            rgba(0, 0, 0, 0.3) 100%);
+          transform: translateY(0);
         }
 
         /* RESPONSIVE */
@@ -283,7 +368,10 @@ const Categorias = () => {
             height: 280px;
           }
           .categoria-name {
-            font-size: 1.1rem;
+            font-size: 1.3rem;
+          }
+          .categoria-description {
+            font-size: 0.85rem;
           }
         }
 
@@ -297,7 +385,10 @@ const Categorias = () => {
             height: 250px;
           }
           .categoria-name {
-            font-size: 1rem;
+            font-size: 1.2rem;
+          }
+          .categoria-description {
+            font-size: 0.8rem;
           }
         }
 
@@ -306,7 +397,10 @@ const Categorias = () => {
             height: 220px;
           }
           .categoria-name {
-            font-size: 0.95rem;
+            font-size: 1.1rem;
+          }
+          .categoria-description {
+            font-size: 0.75rem;
           }
         }
 
@@ -315,7 +409,13 @@ const Categorias = () => {
             height: 200px;
           }
           .categoria-name {
-            font-size: 0.9rem;
+            font-size: 1rem;
+          }
+          .categoria-info-container {
+            padding: 20px 10px 15px;
+          }
+          .categoria-description {
+            max-width: 95%;
           }
         }
       `}</style>

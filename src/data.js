@@ -13,7 +13,13 @@ import {
 } from 'lucide-react';
 
 // =================================================================
-// CLIENTES CON CONTRASEÑA (CORREGIDO - SIN ESPACIOS)
+// 🔑 CONSTANTES DE ROLES
+// =================================================================
+export const ROLE_ADMIN = 1;
+export const ROLE_CLIENTE = 2;
+
+// =================================================================
+// 👥 CLIENTES CON CONTRASEÑA (CORREGIDO - SIN ESPACIOS)
 // =================================================================
 export const initialCustomers = [
   {
@@ -28,7 +34,10 @@ export const initialCustomers = [
     SaldoaFavor: "150000",
     Estado: true,
     Pedidos: 5,
-    FechaRegistro: "2024-01-15"
+    FechaRegistro: "2024-01-15",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 2,
@@ -42,7 +51,10 @@ export const initialCustomers = [
     SaldoaFavor: "0",
     Estado: true,
     Pedidos: 2,
-    FechaRegistro: "2024-02-20"
+    FechaRegistro: "2024-02-20",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 3,
@@ -56,7 +68,10 @@ export const initialCustomers = [
     SaldoaFavor: "45000",
     Estado: true,
     Pedidos: 8,
-    FechaRegistro: "2024-03-10"
+    FechaRegistro: "2024-03-10",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 4,
@@ -70,7 +85,10 @@ export const initialCustomers = [
     SaldoaFavor: "32000",
     Estado: true,
     Pedidos: 3,
-    FechaRegistro: "2024-01-25"
+    FechaRegistro: "2024-01-25",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 5,
@@ -84,7 +102,10 @@ export const initialCustomers = [
     SaldoaFavor: "0",
     Estado: false,
     Pedidos: 0,
-    FechaRegistro: "2024-04-05"
+    FechaRegistro: "2024-04-05",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 6,
@@ -98,7 +119,10 @@ export const initialCustomers = [
     SaldoaFavor: "210500",
     Estado: true,
     Pedidos: 12,
-    FechaRegistro: "2023-12-10"
+    FechaRegistro: "2023-12-10",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 7,
@@ -112,7 +136,10 @@ export const initialCustomers = [
     SaldoaFavor: "18900",
     Estado: true,
     Pedidos: 4,
-    FechaRegistro: "2024-02-15"
+    FechaRegistro: "2024-02-15",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 8,
@@ -126,7 +153,10 @@ export const initialCustomers = [
     SaldoaFavor: "0",
     Estado: true,
     Pedidos: 1,
-    FechaRegistro: "2024-05-01"
+    FechaRegistro: "2024-05-01",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 9,
@@ -140,7 +170,10 @@ export const initialCustomers = [
     SaldoaFavor: "76400",
     Estado: true,
     Pedidos: 7,
-    FechaRegistro: "2024-03-20"
+    FechaRegistro: "2024-03-20",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   },
   {
     IdCliente: 10,
@@ -154,7 +187,10 @@ export const initialCustomers = [
     SaldoaFavor: "0",
     Estado: false,
     Pedidos: 0,
-    FechaRegistro: "2024-01-30"
+    FechaRegistro: "2024-01-30",
+    IdRol: ROLE_CLIENTE,
+    Rol: "cliente",
+    userType: "cliente"
   }
 ];
 
@@ -164,14 +200,14 @@ export const initialCustomers = [
 export const validateCustomerCredentials = (email, password) => {
   const cleanEmail = email.toLowerCase().trim();
   const cleanPassword = password.trim();
-  
+
   // Buscar en initialCustomers
   const customer = initialCustomers.find(c => {
     const customerEmail = c.Correo ? c.Correo.toLowerCase().trim() : '';
     const customerPassword = c.Clave ? c.Clave.trim() : '';
     return customerEmail === cleanEmail && customerPassword === cleanPassword;
   });
-  
+
   if (customer) {
     return {
       success: true,
@@ -185,7 +221,7 @@ export const validateCustomerCredentials = (email, password) => {
       }
     };
   }
-  
+
   // Buscar también en localStorage
   try {
     const storedCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
@@ -194,7 +230,7 @@ export const validateCustomerCredentials = (email, password) => {
       const customerPassword = c.Clave ? c.Clave.trim() : '';
       return customerEmail === cleanEmail && customerPassword === cleanPassword;
     });
-    
+
     if (localCustomer) {
       return {
         success: true,
@@ -211,7 +247,7 @@ export const validateCustomerCredentials = (email, password) => {
   } catch (error) {
     console.error("Error al leer clientes de localStorage:", error);
   }
-  
+
   return {
     success: false,
     message: 'Correo o contraseña incorrectos'
@@ -221,34 +257,34 @@ export const validateCustomerCredentials = (email, password) => {
 export const registerCustomer = (customerData) => {
   const { name, email, password, phone, address } = customerData;
   const cleanEmail = email.toLowerCase().trim();
-  
+
   // Verificar si el email ya existe en initialCustomers
   const emailExistsInInitial = initialCustomers.some(c => {
     const customerEmail = c.Correo ? c.Correo.toLowerCase().trim() : '';
     return customerEmail === cleanEmail;
   });
-  
+
   // Verificar en localStorage
   const storedCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
   const emailExistsInLocal = storedCustomers.some(c => {
     const customerEmail = c.Correo ? c.Correo.toLowerCase().trim() : '';
     return customerEmail === cleanEmail;
   });
-  
+
   if (emailExistsInInitial || emailExistsInLocal) {
     return {
       success: false,
       message: 'Este correo ya está registrado'
     };
   }
-  
+
   // Crear nuevo cliente
   const newCustomerId = Math.max(
     ...initialCustomers.map(c => c.IdCliente),
     ...storedCustomers.map(c => c.IdCliente || 0),
     0
   ) + 1;
-  
+
   const newCustomer = {
     IdCliente: newCustomerId,
     Nombre: name.trim(),
@@ -267,11 +303,11 @@ export const registerCustomer = (customerData) => {
     Rol: 'cliente',
     userType: 'cliente'
   };
-  
+
   // Guardar en localStorage
   storedCustomers.push(newCustomer);
   localStorage.setItem('customers', JSON.stringify(storedCustomers));
-  
+
   return {
     success: true,
     customer: newCustomer
@@ -442,7 +478,6 @@ export const getCurrentPermissions = () => {
 export const getVisibleModules = () => {
   const user = getCurrentUser();
   if (!user) return [];
-  
   if (user.IdRol === 1) return modules;
   
   const role = roles.find(r => r.IdRol === user.IdRol);
@@ -458,7 +493,6 @@ export const hasPermission = (permission) => {
   
   const role = roles.find(r => r.IdRol === user.IdRol);
   if (!role) return false;
-  
   return role.Permisos?.includes(permission) || false;
 };
 
@@ -615,17 +649,7 @@ export const initialSuppliers = [
   { IdProveedor: 2, Nombre: "Importaciones XYZ", TipoDocumento: "NIT", NumeroDocumento: "900234567-8", Telefono: "+57 301 234 5678", Direccion: "Av. Las Vegas #78-12, Medellín", Correo: "contacto@xyzimport.com", Estado: true },
   { IdProveedor: 3, Nombre: "Gorras del Valle", TipoDocumento: "NIT", NumeroDocumento: "900345678-9", Telefono: "+57 302 345 6789", Direccion: "Calle 56 #34-21, Cali", Correo: "info@gorrasvalle.com", Estado: false },
   { IdProveedor: 4, Nombre: "Textiles Norte", TipoDocumento: "NIT", NumeroDocumento: "900456789-0", Telefono: "+57 303 456 7890", Direccion: "Av. Boyacá #45-67, Bogotá", Correo: "pedidos@textilesnorte.com", Estado: true },
-  { IdProveedor: 5, Nombre: "Alimentos Andinos S.A.", TipoDocumento: "NIT", NumeroDocumento: "901234567-1", Telefono: "+57 310 567 8901", Direccion: "Carrera 45 #90-23, Medellín", Correo: "ventas@alimentosandinos.co", Estado: true },
-  { IdProveedor: 6, Nombre: "Electrónicos del Futuro", TipoDocumento: "NIT", NumeroDocumento: "902345678-2", Telefono: "+57 311 678 9012", Direccion: "Calle 78 #12-34, Envigado", Correo: "soporte@electronicosfuturo.com", Estado: true },
-  { IdProveedor: 7, Nombre: "Papelería Creativa Ltda.", TipoDocumento: "NIT", NumeroDocumento: "903456789-3", Telefono: "+57 312 789 0123", Direccion: "Carrera 30 #56-78, Itagüí", Correo: "pedidos@papeleriacreativa.com", Estado: true },
-  { IdProveedor: 8, Nombre: "Confecciones Antioquia", TipoDocumento: "NIT", NumeroDocumento: "904567890-4", Telefono: "+57 313 890 1234", Direccion: "Av. Oriental #23-45, Medellín", Correo: "produccion@confeccionesantioquia.com", Estado: false },
-  { IdProveedor: 9, Nombre: "Empaques EcoSostenibles", TipoDocumento: "NIT", NumeroDocumento: "905678901-5", Telefono: "+57 314 901 2345", Direccion: "Calle 120 #45-67, Sabaneta", Correo: "info@empaqueseco.co", Estado: true },
-  { IdProveedor: 10, Nombre: "Ferretería La Estrella", TipoDocumento: "NIT", NumeroDocumento: "906789012-6", Telefono: "+57 315 012 3456", Direccion: "Carrera 52 #89-01, Medellín", Correo: "ventas@ferreterialaestrella.com", Estado: true },
-  { IdProveedor: 11, Nombre: "Dulces Regionales SAS", TipoDocumento: "NIT", NumeroDocumento: "907890123-7", Telefono: "+57 316 123 4567", Direccion: "Calle 65 #22-11, Bello", Correo: "distribucion@dulcesregionales.co", Estado: true },
-  { IdProveedor: 12, Nombre: "Muebles Artesanales", TipoDocumento: "NIT", NumeroDocumento: "908901234-8", Telefono: "+57 317 234 5678", Direccion: "Vereda El Porvenir, La Ceja", Correo: "contacto@mueblesartesanales.com", Estado: false },
-  { IdProveedor: 13, Nombre: "Cosméticos Naturales", TipoDocumento: "NIT", NumeroDocumento: "909012345-9", Telefono: "+57 318 345 6789", Direccion: "Carrera 70 #34-56, Medellín", Correo: "ventas@cosmeticosnaturales.co", Estado: true },
-  { IdProveedor: 14, Nombre: "Herramientas Profesionales", TipoDocumento: "NIT", NumeroDocumento: "900123457-0", Telefono: "+57 319 456 7890", Direccion: "Av. 80 #67-89, Medellín", Correo: "soporte@herramientaspro.com", Estado: true },
-  { IdProveedor: 15, Nombre: "Café Premium Antioqueño", TipoDocumento: "NIT", NumeroDocumento: "901234568-1", Telefono: "+57 320 567 8901", Direccion: "Finca El Roble, Fredonia", Correo: "export@cafepremium.co", Estado: true }
+  { IdProveedor: 5, Nombre: "Alimentos Andinos S.A.", TipoDocumento: "NIT", NumeroDocumento: "901234567-1", Telefono: "+57 310 567 8901", Direccion: "Carrera 45 #90-23, Medellín", Correo: "ventas@alimentosandinos.co", Estado: true }
 ];
 
 export const initialCategories = [
@@ -651,23 +675,14 @@ export const initialCategories = [
 export const validateUserCredentials = (email, password) => {
   const cleanEmail = email.toLowerCase().trim();
   const cleanPassword = password.trim();
-  
-  console.log("🔍 Validando credenciales:", { cleanEmail, cleanPassword });
-  console.log("📋 Usuarios disponibles:", initialUsers.map(u => ({ 
-    email: u.Correo, 
-    pass: u.Clave,
-    estado: u.Estado 
-  })));
-  
+
   // Verificar usuarios de initialUsers
   const user = initialUsers.find(u => {
     const userEmail = u.Correo ? u.Correo.toLowerCase().trim() : '';
     const userPassword = u.Clave ? u.Clave.trim() : '';
-    const match = userEmail === cleanEmail && u.Estado === true && userPassword === cleanPassword;
-    if (match) console.log("✅ Usuario encontrado:", u.Nombre);
-    return match;
+    return userEmail === cleanEmail && u.Estado === true && userPassword === cleanPassword;
   });
-  
+
   if (user) {
     return {
       ...user,
@@ -677,9 +692,7 @@ export const validateUserCredentials = (email, password) => {
       Permisos: user.Permisos || []
     };
   }
-  
-  console.log("❌ Usuario no encontrado en initialUsers");
-  
+
   // Verificar usuarios registrados en localStorage
   try {
     const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -688,15 +701,14 @@ export const validateUserCredentials = (email, password) => {
       const userPassword = u.Clave ? u.Clave.trim() : '';
       return userEmail === cleanEmail && userPassword === cleanPassword;
     });
-    
+
     if (storedUser) {
-      console.log("✅ Usuario encontrado en localStorage:", storedUser.Nombre);
       return storedUser;
     }
   } catch (error) {
     console.error("Error al leer usuarios de localStorage:", error);
   }
-  
+
   return null;
 };
 
@@ -751,32 +763,32 @@ export const getTotalSales = () => {
 export const getProductsByColorAndSize = (color, size) => {
   return initialProducts.filter(product => {
     if (!product.isActive) return false;
-    
-    const colorMatch = !color || (product.colores && product.colores.some(c => 
+
+    const colorMatch = !color || (product.colores && product.colores.some(c =>
       c.toLowerCase().includes(color.toLowerCase())
     ));
-    
-    const sizeMatch = !size || (product.tallas && product.tallas.some(t => 
+
+    const sizeMatch = !size || (product.tallas && product.tallas.some(t =>
       t.toLowerCase().includes(size.toLowerCase())
     ));
-    
+
     return colorMatch && sizeMatch;
   });
 };
 
 export const getFilteredProductsOnSale = (filters = {}) => {
   let filtered = getProductsOnSale();
-  
+
   if (filters.color) {
-    filtered = filtered.filter(p => p.colores && p.colores.some(c => 
+    filtered = filtered.filter(p => p.colores && p.colores.some(c =>
       c.toLowerCase().includes(filters.color.toLowerCase())
     ));
   }
-  
+
   if (filters.category) {
     filtered = filtered.filter(p => p.categoria && p.categoria.toLowerCase().includes(filters.category.toLowerCase()));
   }
-  
+
   return filtered;
 };
 
@@ -827,7 +839,7 @@ export const checkRouteAccess = (route) => {
   const user = getCurrentUser();
   if (!user) return false;
   if (user.IdRol === 1) return true;
-  
+
   const routePermissionMap = {
     '/dashboard': 'dashboard',
     '/categorias': 'categorias',
@@ -840,11 +852,11 @@ export const checkRouteAccess = (route) => {
     '/usuarios': 'usuarios',
     '/roles': 'roles'
   };
-  
+
   const cleanRoute = route.split('?')[0];
   const baseRoute = cleanRoute.split('/')[1] ? `/${cleanRoute.split('/')[1]}` : cleanRoute;
   const requiredPermission = routePermissionMap[baseRoute];
-  
+
   if (!requiredPermission) return true;
   return hasPermission(requiredPermission);
 };
@@ -867,7 +879,7 @@ export const canPerformAction = (action) => {
   const user = getCurrentUser();
   if (!user) return false;
   if (user.IdRol === 1) return true;
-  
+
   const actionPermissionMap = {
     'create_product': 'productos',
     'edit_product': 'productos',
@@ -906,7 +918,7 @@ export const canPerformAction = (action) => {
     'delete_role': 'roles',
     'view_roles': 'roles'
   };
-  
+
   const requiredPermission = actionPermissionMap[action];
   if (!requiredPermission) return false;
   return hasPermission(requiredPermission);
@@ -938,10 +950,9 @@ export const loginUser = (email, password) => {
       ...user,
       userType: user.IdRol === 1 ? "admin" : "usuario"
     };
-    
     localStorage.setItem('user', JSON.stringify(userWithType));
     const visibleModules = getModulesByRole(user.IdRol);
-    
+
     return {
       success: true,
       user: userWithType,
@@ -949,7 +960,6 @@ export const loginUser = (email, password) => {
       message: "Login exitoso"
     };
   }
-  
   return {
     success: false,
     message: "Credenciales incorrectas"
@@ -967,7 +977,7 @@ const generateProductData = (basePrice, baseStock) => {
   const originalPrice = hasDiscount ? price * (1.2 + Math.random() * 0.3) : price;
   const isFeatured = Math.random() > 0.8;
   const sales = Math.floor(Math.random() * 100);
-  
+
   return {
     precio: Math.round(price / 1000) * 1000,
     originalPrice: Math.round(originalPrice / 1000) * 1000,
@@ -987,19 +997,19 @@ const extractColorsFromFileName = (fileName) => {
     'naranja', 'amarillo', 'plateado', 'dorado', 'beige', 'natural'
   ];
   const fileNameLower = fileName.toLowerCase();
-  
+
   colorKeywords.forEach(color => {
     if (fileNameLower.includes(color)) {
       colors.push(color.charAt(0).toUpperCase() + color.slice(1));
     }
   });
-  
+
   return colors.length > 0 ? colors : ["Negro"];
 };
 
 const getSizesByCategory = (category) => {
   const categoryClean = category ? category.trim() : '';
-  
+
   if (categoryClean.includes("RELOJES")) {
     return ["Única"];
   } else if (categoryClean.includes("CAMISETAS")) {
@@ -1033,284 +1043,12 @@ const productData = [
     descripcion: "Gorra béisbolera premium con diseño contipo A"
   },
   {
-    id: 3,
-    nombre: "Gorra Azul Derayo",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910797/gorraazulderayo_v8qcb0.jpg"],
-    descripcion: "Gorra estilo derayo en color azul"
-  },
-  {
-    id: 4,
-    nombre: "Gorra Azul Gris LA",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910786/gorraazulgrisLa_i1dazk.jpg"],
-    descripcion: "Gorra azul con detalles grises y logo LA"
-  },
-  {
-    id: 5,
-    nombre: "Gorra Azul Letra Verde B",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910791/gorraazulletraverdeB_wb2htn.jpg"],
-    descripcion: "Gorra azul con letras verdes en diseño B"
-  },
-  {
-    id: 6,
-    nombre: "Gorra Azul Toda LA",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910779/gorraazulltodaLA_ykxdvi.jpg"],
-    descripcion: "Gorra completamente azul con logo LA"
-  },
-  {
-    id: 7,
-    nombre: "Gorra Azul Morado NY",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910789/gorraazulmoradoNY_vlhcqv.jpg"],
-    descripcion: "Gorra azul con detalles morados y logo NY"
-  },
-  {
-    id: 8,
-    nombre: "Gorra Azul SF",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910775/gorraazulsf_ckhji6.jpg"],
-    descripcion: "Gorra azul con logo San Francisco"
-  },
-  {
-    id: 9,
-    nombre: "Gorra Azul SF Café",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910774/gorraazulSFcafe_jxzvfg.jpg"],
-    descripcion: "Gorra azul con detalles café y logo SF"
-  },
-  {
-    id: 10,
-    nombre: "Gorra Azul Sox Blanca",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910775/gorraazulsoxblanca_eagdgv.jpg"],
-    descripcion: "Gorra azul con detalles blancos y logo Sox"
-  },
-  {
-    id: 11,
-    nombre: "Gorra Azul SOX Gris",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910774/gorraazulSOXgris_qzk2p7.jpg"],
-    descripcion: "Gorra azul con detalles grises y logo SOX"
-  },
-  {
-    id: 12,
-    nombre: "Gorra Azul Toda A",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910780/gorraAzultodaA_wk7fta.jpg"],
-    descripcion: "Gorra completamente azul con logo A"
-  },
-  {
-    id: 13,
-    nombre: "Gorra Azul Toda AS",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910781/gorraazultodaAS_pmxymi.jpg"],
-    descripcion: "Gorra completamente azul con logo AS"
-  },
-  {
-    id: 14,
-    nombre: "Gorra Azul Toda NY",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910780/gorraazultodaNY_cyfchf.jpg"],
-    descripcion: "Gorra completamente azul con logo NY"
-  },
-  {
-    id: 15,
-    nombre: "Gorra Azul NY Blanca",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910776/gorraazulNYblanca_bajj96.jpg"],
-    descripcion: "Gorra azul con detalles blancos y logo NY"
-  },
-  {
-    id: 16,
-    nombre: "Gorra Azul NY Roja",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910775/gorraazulNYroja_qagkoy.jpg"],
-    descripcion: "Gorra azul con detalles rojos y logo NY"
-  },
-  {
-    id: 17,
-    nombre: "Gorra Azul Plata AA",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910792/gorraazulplataAA_mejjar.jpg"],
-    descripcion: "Gorra azul con detalles plateados y logo AA"
-  },
-  {
-    id: 18,
-    nombre: "Gorra Azul Plata BB",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910791/gorraazulplataBB_i9gnwx.jpg"],
-    descripcion: "Gorra azul con detalles plateados y logo BB"
-  },
-  {
-    id: 19,
-    nombre: "Gorra Azul P Plateada",
-    categoria: "BEISBOLERA PREMIUM",
-    IdCategoria: 3,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762910778/gorraazulPplateda_qpe5yd.jpg"],
-    descripcion: "Gorra azul con detalles plateados y logo P"
-  },
-  {
-    id: 55,
-    nombre: "Gorra A Roja",
-    categoria: "DIAMANTE IMPORTADA",
-    IdCategoria: 4,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914404/gorraAroja_eypttd.jpg"],
-    descripcion: "Gorra diamante importada color rojo con logo A"
-  },
-  {
-    id: 56,
-    nombre: "Gorra AS",
-    categoria: "DIAMANTE IMPORTADA",
-    IdCategoria: 4,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914407/gorraAS_qybamm.jpg"],
-    descripcion: "Gorra diamante importada con logo AS"
-  },
-  {
-    id: 57,
-    nombre: "Gorra Con Rosas",
-    categoria: "DIAMANTE IMPORTADA",
-    IdCategoria: 4,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914412/gorraconrosas_ko3326.jpg"],
-    descripcion: "Gorra diamante importada con diseño de rosas"
-  },
-  {
-    id: 58,
-    nombre: "Gorra Doge",
-    categoria: "DIAMANTE IMPORTADA",
-    IdCategoria: 4,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914410/gorradoge_mefwmo.jpg"],
-    descripcion: "Gorra diamante importada con diseño Doge"
-  },
-  {
-    id: 59,
-    nombre: "Gorra LA",
-    categoria: "DIAMANTE IMPORTADA",
-    IdCategoria: 4,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914409/gorraLA_vz1fsr.jpg"],
-    descripcion: "Gorra diamante importada con logo LA"
-  },
-  {
-    id: 60,
-    nombre: "Gorra NY",
-    categoria: "DIAMANTE IMPORTADA",
-    IdCategoria: 4,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914405/gorraNY_z3oxea.jpg"],
-    descripcion: "Gorra diamante importada con logo NY"
-  },
-  {
-    id: 61,
-    nombre: "Gorra Azul Cerdo Verde",
-    categoria: "EQUINAS-AGROPECUARIAS",
-    IdCategoria: 5,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762916288/gorraazulcerdoverde_e10kc7.jpg"],
-    descripcion: "Gorra agropecuaria azul con diseño de cerdo verde"
-  },
-  {
-    id: 62,
-    nombre: "Gorra Azul Toro",
-    categoria: "EQUINAS-AGROPECUARIAS",
-    IdCategoria: 5,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914771/gorraazultoro_h1mqjb.jpg"],
-    descripcion: "Gorra agropecuaria azul con diseño de toro"
-  },
-  {
-    id: 63,
-    nombre: "Gorra Blanca 2 Gallo",
-    categoria: "EQUINAS-AGROPECUARIAS",
-    IdCategoria: 5,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762914723/gorrablanca2gallo_rlwyl7.jpg"],
-    descripcion: "Gorra agropecuaria blanca con diseño de gallo"
-  },
-  {
     id: 101,
     nombre: "Gorra Roja y Morada 9",
     categoria: "NIKE 1.1",
     IdCategoria: 1,
     imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762950188/gorrarojaymorada9_sufoqt.jpg"],
     descripcion: "Gorra Nike edición limitada roja y morada"
-  },
-  {
-    id: 102,
-    nombre: "Gorra Azul Del Buldog",
-    categoria: "NIKE 1.1",
-    IdCategoria: 1,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762949687/gorrasazuldelbuldog_ebyrlc.jpg"],
-    descripcion: "Gorra Nike azul con diseño Buldog"
-  },
-  {
-    id: 103,
-    nombre: "Gorra Gris Elefante 8",
-    categoria: "NIKE 1.1",
-    IdCategoria: 1,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762950188/gorrasgriselfante8_czzieu.jpg"],
-    descripcion: "Gorra Nike gris con diseño de elefante"
-  },
-  {
-    id: 186,
-    nombre: "Gorra Letras",
-    categoria: "EXCLUSIVA 1.1",
-    IdCategoria: 6,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762956761/gorraletras_hh9lvu.jpg"],
-    descripcion: "Gorra exclusiva con diseño de letras"
-  },
-  {
-    id: 187,
-    nombre: "Gorra Angel",
-    categoria: "EXCLUSIVA 1.1",
-    IdCategoria: 6,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762956755/gorraangel_tveggt.jpg"],
-    descripcion: "Gorra exclusiva con diseño angelical"
-  },
-  {
-    id: 188,
-    nombre: "Gorra Café",
-    categoria: "EXCLUSIVA 1.1",
-    IdCategoria: 6,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762956756/gorracafe_mv4wfq.jpg"],
-    descripcion: "Gorra exclusiva color café"
-  },
-  {
-    id: 107,
-    nombre: "Gorra Monastery Malla",
-    categoria: "MULTIMARCA",
-    IdCategoria: 8,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957915/gorramonasterymalla_o0rm13.jpg"],
-    descripcion: "Gorra multibrand Monastery con malla"
-  },
-  {
-    id: 108,
-    nombre: "Gorra Negra Under",
-    categoria: "MULTIMARCA",
-    IdCategoria: 8,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957902/gorranegraundld_uh9wwr.jpg"],
-    descripcion: "Gorra multibrand negra estilo Under"
-  },
-  {
-    id: 109,
-    nombre: "Gorra Amiri Blanca",
-    categoria: "MULTIMARCA",
-    IdCategoria: 8,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762957956/gorraamiriblanca_xuguvk.jpg"],
-    descripcion: "Gorra multibrand Amiri blanca"
   },
   {
     id: 339,
@@ -1321,92 +1059,12 @@ const productData = [
     descripcion: "Gorra premium gris con diseño CC"
   },
   {
-    id: 340,
-    nombre: "Gorra Hugo Boss",
-    categoria: "PREMIUM",
-    IdCategoria: 12,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762987076/gorrahugoboss_ev6z54.jpg"],
-    descripcion: "Gorra premium Hugo Boss"
-  },
-  {
-    id: 341,
-    nombre: "Gorra Marrón CC",
-    categoria: "PREMIUM",
-    IdCategoria: 12,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762987049/gorramarronCC_gjngm5.jpg"],
-    descripcion: "Gorra premium marrón con diseño CC"
-  },
-  {
-    id: 428,
-    nombre: "Gorra Azul NY",
-    categoria: "PLANA CERRADA 1.1",
-    IdCategoria: 9,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988571/gorraazulNY_huym2t.jpg"],
-    descripcion: "Gorra plana cerrada azul con logo NY"
-  },
-  {
-    id: 429,
-    nombre: "Gorra Blanca Buks",
-    categoria: "PLANA CERRADA 1.1",
-    IdCategoria: 9,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988568/gorrablancabuks_ll8ymc.jpg"],
-    descripcion: "Gorra plana cerrada blanca estilo Buks"
-  },
-  {
-    id: 430,
-    nombre: "Gorra Negra Celtics",
-    categoria: "PLANA CERRADA 1.1",
-    IdCategoria: 9,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762988567/gorranegraceltics_isriex.jpg"],
-    descripcion: "Gorra plana cerrada negra Boston Celtics"
-  },
-  {
-    id: 462,
-    nombre: "Portagorras Sencillo",
-    categoria: "PORTAGORRAS",
-    IdCategoria: 11,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762994460/portagorras-1sencillo_xxe5hf.jpg"],
-    descripcion: "Portagorras sencillo para una gorra"
-  },
-  {
-    id: 463,
-    nombre: "Portagorras Blowup 4",
-    categoria: "PORTAGORRAS",
-    IdCategoria: 11,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1762994456/portagorrablowup4_g2j684.jpg"],
-    descripcion: "Portagorras blowup para 4 gorras"
-  },
-  {
     id: 500,
     nombre: "Reloj Azul MX60",
     categoria: "RELOJES",
     IdCategoria: 14,
     imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1763002075/azulmx60ot_oal8yb.jpg"],
     descripcion: "Reloj deportivo azul MX60 resistente al agua"
-  },
-  {
-    id: 501,
-    nombre: "Reloj Negro Richard",
-    categoria: "RELOJES",
-    IdCategoria: 14,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1763002076/richarnegro_p6m73v.jpg"],
-    descripcion: "Reloj elegante negro Richard"
-  },
-  {
-    id: 502,
-    nombre: "Reloj Deportivo Azul",
-    categoria: "RELOJES",
-    IdCategoria: 14,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1763002075/sportredondoazul_quo4td.jpg"],
-    descripcion: "Reloj deportivo redondo azul"
-  },
-  {
-    id: 503,
-    nombre: "Reloj Deportivo Negro",
-    categoria: "RELOJES",
-    IdCategoria: 14,
-    imagenes: ["https://res.cloudinary.com/dxc5qqsjd/image/upload/v1763002075/sportwatchnegro_e5gjcp.jpg"],
-    descripcion: "Reloj deportivo negro con múltiples funciones"
   }
 ];
 
@@ -1415,7 +1073,7 @@ export const generateProductsFromJson = () => {
     const productGenData = generateProductData(120000, 25);
     const colors = extractColorsFromFileName(product.nombre || '');
     const sizes = getSizesByCategory(product.categoria);
-    
+
     return {
       ...product,
       ...productGenData,

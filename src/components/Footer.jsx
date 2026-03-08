@@ -1,250 +1,168 @@
-// src/components/Footer.jsx
 import React from 'react';
-import { FaFacebookF, FaTwitter, FaInstagram, FaWhatsapp } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp, FaFacebookF, FaTiktok, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaChevronRight } from 'react-icons/fa';
 
 const Footer = () => {
+  const iconStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '35px',
+    height: '35px',
+    borderRadius: '50%',
+    backgroundColor: '#1a1d23',
+    color: '#fff',
+    fontSize: '1.1rem',
+    textDecoration: 'none',
+    transition: 'all 0.3s ease'
+  };
+
+  const listLinkStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: '#CCCCCC',
+    textDecoration: 'none',
+    fontSize: '0.85rem',
+    marginBottom: '10px',
+    transition: 'color 0.3s ease'
+  };
+
+  const contactItemStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    color: '#CCCCCC',
+    fontSize: '0.85rem',
+    marginBottom: '10px'
+  };
+
+  // Función para obtener el color de cada red social
+  const getSocialIconColor = (icon) => {
+    switch(icon) {
+      case 'facebook':
+        return '#1877F2';
+      case 'instagram':
+        return '#E4405F';
+      case 'whatsapp':
+        return '#25D366';
+      case 'tiktok':
+        return '#000000';
+      default:
+        return '#fff';
+    }
+  };
+
   return (
     <footer style={{
       backgroundColor: '#000000',
       color: '#fff',
-      padding: '15px 20px 10px 20px',
-      marginTop: '0',
-      width: '100%',
-      borderTop: '2px solid #FFC107',
-      boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.3)'
+      padding: '40px 20px 30px 20px',
+      fontFamily: 'Arial, sans-serif'
     }}>
       
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '15px'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '30px',
+        marginBottom: '0'
       }}>
         
-        {/* Sección principal con 3 columnas */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '15px'
-        }}>
-          
-          {/* Columna 1: Quiénes Somos */}
-          <div style={{ 
-            flex: 1, 
-            minWidth: '250px'
-          }}>
-            <h3 style={{
-              color: '#FFC107',
-              fontSize: '0.95rem',
-              margin: '0 0 8px 0',
-              fontWeight: 'bold'
-            }}>
-              Quiénes Somos
-            </h3>
-            <p style={{
-              color: '#CCCCCC',
-              lineHeight: '1.4',
-              fontSize: '0.8rem',
-              margin: 0
-            }}>
-              GM CAPS es una tienda especializada en gorras de alta calidad. 
-              Ofrecemos las mejores marcas y diseños exclusivos para que encuentres tu estilo perfecto.
-            </p>
+        {/* Columna 1: Logo y Eslogan */}
+        <div>
+          <div style={{ marginBottom: '15px' }}>
+            <h2 style={{ 
+              color: '#d4af37',
+              fontSize: '2rem', 
+              margin: 0, 
+              fontWeight: 'bold',
+              letterSpacing: '1px' 
+            }}>GM</h2>
           </div>
-
-          {/* Columna 2: Síguenos */}
-          <div style={{ 
-            flex: 1, 
-            minWidth: '150px',
-            textAlign: 'center'
+          <p style={{ 
+            color: '#888', 
+            fontSize: '0.85rem', 
+            lineHeight: '1.5',
+            maxWidth: '220px' 
           }}>
-            <h4 style={{
-              color: '#FFFFFF',
-              fontSize: '0.9rem',
-              margin: '0 0 8px 0',
-              fontWeight: '600'
-            }}>
-              Síguenos
-            </h4>
-            
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '8px',
-              marginBottom: '8px'
-            }}>
-              <a href="#" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                fontSize: '0.7rem',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-                border: '1px solid #333',
-                textDecoration: 'none'
-              }}>
-                <FaFacebookF size={10} color="#4267B2" />
-              </a>
-              
-              <a href="#" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                fontSize: '0.7rem',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-                border: '1px solid #333',
-                textDecoration: 'none'
-              }}>
-                <FaTwitter size={10} color="#1DA1F2" />
-              </a>
-              
-              <a href="#" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                fontSize: '0.7rem',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-                border: '1px solid #333',
-                textDecoration: 'none'
-              }}>
-                <FaInstagram size={10} color="#E1306C" />
-              </a>
-              
-              <a href="#" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                fontSize: '0.7rem',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-                border: '1px solid #333',
-                textDecoration: 'none'
-              }}>
-                <FaWhatsapp size={10} color="#25D366" />
-              </a>
-            </div>
-            
-            <p style={{
-              color: '#FFC107',
-              fontSize: '0.75rem',
-              fontWeight: '500',
-              margin: 0
-            }}>
-              Tu tienda de confianza para las mejores gorras
-            </p>
-          </div>
-
-          {/* Columna 3: Contacto */}
-          <div style={{ 
-            flex: 1, 
-            minWidth: '250px',
-            textAlign: 'right'
-          }}>
-            <p style={{
-              color: '#FFC107',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              margin: '0 0 5px 0'
-            }}>
-              Contáctanos para consultas y pedidos especiales
-            </p>
-            <p style={{
-              color: '#CCCCCC',
-              fontSize: '0.75rem',
-              margin: 0,
-              lineHeight: '1.3'
-            }}>
-              Estamos disponibles para resolver tus dudas y ayudarte a encontrar la gorra perfecta.
-            </p>
-          </div>
-
+            Tu tienda de confianza para las mejores gorras. Calidad y estilo en cada producto.
+          </p>
         </div>
 
-        {/* Línea divisoria */}
-        <hr style={{
-          width: '100%',
-          height: '1px',
-          border: 'none',
-          backgroundColor: '#FFC107',
-          opacity: 0.3,
-          margin: '5px 0'
-        }} />
+        {/* Columna 2: Enlaces Rápidos */}
+        <div>
+          <h4 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: '600' }}>Enlaces Rápidos</h4>
+          <nav>
+            <a 
+              href="#quienes-somos" 
+              style={listLinkStyle}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#FFC107'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#CCCCCC'}
+            >
+              <FaChevronRight size={10} color="#888"/> Quiénes Somos
+            </a>
+            <a 
+              href="#politica-devoluciones" 
+              style={listLinkStyle}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#FFC107'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#CCCCCC'}
+            >
+              <FaChevronRight size={10} color="#888"/> Política de Devoluciones
+            </a>
+            <a 
+              href="#terminos-condiciones" 
+              style={listLinkStyle}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#FFC107'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#CCCCCC'}
+            >
+              <FaChevronRight size={10} color="#888"/> Términos y Condiciones
+            </a>
+            <a 
+              href="#politica-privacidad" 
+              style={listLinkStyle}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#FFC107'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#CCCCCC'}
+            >
+              <FaChevronRight size={10} color="#888"/> Política de Privacidad
+            </a>
+          </nav>
+        </div>
 
-        {/* Sección inferior con 3 elementos EN UNA SOLA LÍNEA */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px'
-        }}>
-          <div style={{
-            flex: 1,
-            minWidth: '150px'
-          }}>
-            <p style={{
-              color: '#888',
-              fontSize: '0.7rem',
-              margin: 0
-            }}>
-              Tu tienda de confianza para las mejores gorras
-            </p>
+        {/* Columna 3: Contacto */}
+        <div>
+          <h4 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: '600' }}>Contacto</h4>
+          <div style={contactItemStyle}>
+            <FaMapMarkerAlt color="#FFC107"/> <span>Medellín, Antioquia</span>
           </div>
-          
-          <div style={{
-            flex: 1,
-            minWidth: '150px',
-            textAlign: 'center'
-          }}>
-            <span style={{
-              color: '#FFC107',
-              fontSize: '0.75rem',
-              fontWeight: '500'
-            }}>
-              © 2025 GM CAPS. Todos los derechos reservados.
-            </span>
+          <div style={contactItemStyle}>
+            <FaPhoneAlt color="#FFC107"/> <span>+57 300 123 4567</span>
           </div>
-          
-          <div style={{
-            flex: 1,
-            minWidth: '150px',
-            textAlign: 'right'
-          }}>
-            <p style={{
-              color: '#888',
-              fontSize: '0.7rem',
-              margin: 0
-            }}>
-              Calidad y estilo en cada producto
-            </p>
+          <div style={contactItemStyle}>
+            <FaEnvelope color="#FFC107"/> <span>info@gmcaps.com</span>
           </div>
         </div>
 
+        {/* Columna 4: Síguenos */}
+        <div>
+          <h4 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: '600' }}>Síguenos</h4>
+          <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <a href="#" style={{...iconStyle, color: getSocialIconColor('facebook')}}><FaFacebookF /></a>
+            <a href="#" style={{...iconStyle, color: getSocialIconColor('instagram')}}><FaInstagram /></a>
+            <a href="#" style={{...iconStyle, color: getSocialIconColor('whatsapp')}}><FaWhatsapp /></a>
+            <a href="#" style={{...iconStyle, color: getSocialIconColor('tiktok')}}><FaTiktok /></a>
+          </div>
+          <p style={{ color: '#888', fontSize: '0.8rem', lineHeight: '1.4' }}>
+            Contáctanos para consultas y pedidos especiales
+          </p>
+        </div>
+      </div>
+
+      {/* Copyright */}
+      <div style={{ textAlign: 'center', marginTop: '30px' }}>
+        <p style={{ color: '#555', fontSize: '0.75rem', margin: 0 }}>
+          © 2026 GM CAPS. Todos los derechos reservados.
+        </p>
       </div>
     </footer>
   );

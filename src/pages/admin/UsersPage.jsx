@@ -1,13 +1,11 @@
 // src/pages/admin/UsersPage.jsx
 import React, { useState, useMemo, useEffect } from "react";
-
 // Componentes
 import SearchInput from "../../components/SearchInput";
 import EntityTable from "../../components/EntityTable";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import Alert from "../../components/Alert";
 import UniversalModal from "../../components/UniversalModal";
-
 // Datos
 import { initialUsers as usersData, initialRoles } from "../../data";
 
@@ -18,30 +16,57 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
-      <button 
-        onClick={() => setOpen(!open)} 
-        style={{ 
-          display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', 
-          backgroundColor: 'transparent', border: '1px solid #F5C81B', color: '#F5C81B', 
-          borderRadius: '6px', fontSize: '13px', cursor: 'pointer', minWidth: '110px', 
-          justifyContent: 'space-between', fontWeight: '600', height: '36px' 
-        }} 
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '8px 12px',
+          backgroundColor: 'transparent',
+          border: '1px solid #F5C81B',
+          color: '#F5C81B',
+          borderRadius: '6px',
+          fontSize: '13px',
+          cursor: 'pointer',
+          minWidth: '110px',
+          justifyContent: 'space-between',
+          fontWeight: '600',
+          height: '36px'
+        }}
       >
-        <span>{filterStatus}</span>
+        {filterStatus}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-          <polyline points="6,9 12,15 18,9"/>
+          <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
       {open && (
-        <div style={{ 
-          position: 'absolute', top: '100%', right: 0, marginTop: '4px', backgroundColor: '#1F2937', 
-          border: '1px solid #F5C81B', borderRadius: '6px', padding: '6px 0', minWidth: '120px', zIndex: 1000 
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: '4px',
+          backgroundColor: '#1F2937',
+          border: '1px solid #F5C81B',
+          borderRadius: '6px',
+          padding: '6px 0',
+          minWidth: '120px',
+          zIndex: 1000
         }}>
           {['Todos', 'Activos', 'Inactivos'].map(status => (
-            <button 
-              key={status} 
-              onClick={() => { onFilterSelect(status); setOpen(false); }} 
-              style={{ width: '100%', padding: '6px 12px', backgroundColor: 'transparent', border: 'none', color: '#F5C81B', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
+            <button
+              key={status}
+              onClick={() => { onFilterSelect(status); setOpen(false); }}
+              style={{
+                width: '100%',
+                padding: '6px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#F5C81B',
+                fontSize: '13px',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
             >
               {status}
             </button>
@@ -52,10 +77,44 @@ const StatusFilter = ({ filterStatus, onFilterSelect }) => {
   );
 };
 
+// =============================================
+// COMPONENTE StatusPill (ESTILO CLIENTES - COMPACTO)
+// =============================================
+const StatusPill = React.memo(({ status }) => {
+  const isActive = status === true || status === 'true' || status === 'Activo';
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "3px 8px",
+      borderRadius: "12px",
+      backgroundColor: isActive ? "#10B98120" : "#EF444420",
+      color: isActive ? "#10B981" : "#EF4444",
+      fontWeight: 600,
+      fontSize: "0.7rem",
+      textTransform: "capitalize",
+      border: `1px solid ${isActive ? "#10B98140" : "#EF444440"}`,
+      gap: "4px"
+    }}>
+      <span style={{
+        width: 6,
+        height: 6,
+        borderRadius: "50%",
+        backgroundColor: isActive ? "#10B981" : "#EF4444",
+        flexShrink: 0
+      }} />
+      {isActive ? 'Activo' : 'Inactivo'}
+    </span>
+  );
+});
+StatusPill.displayName = 'StatusPill';
+
 const FormField = React.memo(function FormField({ label, required, children, error }) {
   return (
-    <div>
-      <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>{label}: {required && <span style={{color: '#ef4444'}}>*</span>}</label>
+    <div style={{ marginBottom: '8px' }}>
+      <label style={{ fontSize: '12px', color: '#e2e8f0', display: 'block', marginBottom: '2px' }}>
+        {label}: {required && <span style={{ color: '#ef4444' }}>*</span>}
+      </label>
       {children}
       {error && <div style={{ color: '#f87171', fontSize: '11px' }}>{error}</div>}
     </div>
@@ -79,25 +138,20 @@ const UsersPage = () => {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
 
-  // ─── Inicializar datos - SOLO UN ADMINISTRADOR CORREGIDO
+  // ─── Inicializar datos
   useEffect(() => {
     const mapped = usersData.map((u, index) => {
       const role = initialRoles.find((r) => r.IdRol === u.IdRol);
       const [nombre, ...apellidos] = u.Nombre.trim().split(/\s+/);
       const apellido = apellidos.join(" ") || "";
-      
-      // CORRECCIÓN: Solo el primer usuario será administrador
-      // Si otros usuarios en initialRoles tienen rol "Administrador", se cambian a "Usuario"
       let rol;
       if (index === 0) {
-        // Primer usuario siempre será administrador
         rol = "Administrador";
       } else {
-        // Para otros usuarios, si su rol es "Administrador", lo cambiamos a "Usuario"
         const roleName = role?.Nombre || "Usuario";
         rol = roleName === "Administrador" ? "Usuario" : roleName;
       }
-      
+
       return {
         id: u.IdUsuario,
         nombre,
@@ -109,6 +163,7 @@ const UsersPage = () => {
         numeroDocumento: u.NumeroDocumento || '',
       };
     });
+
     setUsers(mapped);
   }, []);
 
@@ -123,17 +178,14 @@ const UsersPage = () => {
 
   // ─── Modal
   const openModal = (user = null) => {
-    // Si el usuario es administrador, solo permitir ver detalles
     if (user && isAdministrador(user)) {
       viewUserDetails(user);
       return;
     }
-
     setEditingUser(user);
     setErrors({});
 
     if (user) {
-      // Modo editar/ver
       setFormData({
         nombre: user.nombre || '',
         apellido: user.apellido || '',
@@ -144,7 +196,6 @@ const UsersPage = () => {
         isActive: user.isActive !== undefined ? user.isActive : true
       });
     } else {
-      // Modo crear
       setFormData({
         nombre: '',
         apellido: '',
@@ -155,6 +206,7 @@ const UsersPage = () => {
         isActive: true
       });
     }
+
     setIsModalOpen(true);
   };
 
@@ -173,7 +225,6 @@ const UsersPage = () => {
         return newErrors;
       });
     }
-
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -186,8 +237,8 @@ const UsersPage = () => {
       { name: 'email', label: 'Email' },
       { name: 'rol', label: 'Rol' },
     ];
-
     const newErrors = {};
+
     requiredFields.forEach(field => {
       const value = formData[field.name];
       const stringValue = value !== null && value !== undefined ? String(value) : '';
@@ -196,7 +247,6 @@ const UsersPage = () => {
       }
     });
 
-    // Validación de email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email no válido';
     }
@@ -219,7 +269,6 @@ const UsersPage = () => {
     };
 
     if (editingUser?.id) {
-      // CORRECCIÓN: No permitir cambiar el rol a Administrador si ya hay uno
       if (updatedData.rol === "Administrador") {
         const existingAdmin = users.find(u => u.rol === "Administrador" && u.id !== editingUser.id);
         if (existingAdmin) {
@@ -227,15 +276,14 @@ const UsersPage = () => {
           return;
         }
       }
-      
-      setUsers(prev => prev.map(u => 
-        u.id === editingUser.id 
+
+      setUsers(prev => prev.map(u =>
+        u.id === editingUser.id
           ? { ...u, ...updatedData }
           : u
       ));
       showAlert(`Usuario "${updatedData.nombre}" actualizado correctamente`, 'edit');
     } else {
-      // CORRECCIÓN: No permitir crear nuevos administradores
       if (updatedData.rol === "Administrador") {
         const existingAdmin = users.find(u => u.rol === "Administrador");
         if (existingAdmin) {
@@ -243,10 +291,10 @@ const UsersPage = () => {
           return;
         }
       }
-      
+
       const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
       setUsers(prev => [...prev, { ...updatedData, id: newId }]);
-      showAlert(`Usuario "${updatedData.nombre}" creado correctamente`, 'add');
+      showAlert(`Usuario "${updatedData.nombre}" registrado correctamente`, 'add');
     }
 
     closeModal();
@@ -258,12 +306,11 @@ const UsersPage = () => {
       showAlert('El usuario "Administrador" no se puede eliminar', "error");
       return;
     }
-    
     if (user.isActive) {
       showAlert('No se puede eliminar un usuario activo. Debe desactivarlo primero.', 'delete');
       return;
     }
-    
+
     setUserToDelete(user);
     setIsConfirmOpen(true);
   };
@@ -281,20 +328,19 @@ const UsersPage = () => {
       showAlert('El usuario "Administrador" siempre está activo', "error");
       return;
     }
-    
     const newStatus = !user.isActive;
-    
+
     setUsers((prev) =>
-      prev.map((u) => 
-        u.id === user.id 
-          ? { 
-              ...u, 
-              isActive: newStatus
-            } 
+      prev.map((u) =>
+        u.id === user.id
+          ? {
+            ...u,
+            isActive: newStatus
+          }
           : u
       )
     );
-    
+
     showAlert(
       `Usuario "${user.nombre}" ${newStatus ? 'activado' : 'desactivado'} correctamente`,
       newStatus ? 'add' : 'delete'
@@ -308,23 +354,17 @@ const UsersPage = () => {
   };
 
   // ─── Utilidades de búsqueda y filtrado
-  // ELIMINADO: const clearSearch = () => { ... } - no se usa
-
-  const handleFilterSelect = (status) => { 
-    setFilterStatus(status); 
-    setCurrentPage(1); 
+  const handleFilterSelect = (status) => {
+    setFilterStatus(status);
+    setCurrentPage(1);
   };
 
   // ─── Filtrado y paginación
   const filteredUsers = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
-    
     return users.filter((user) => {
-      // Filtro por estado
       if (filterStatus === 'Activos' && !user.isActive) return false;
       if (filterStatus === 'Inactivos' && user.isActive) return false;
-      
-      // Filtro por búsqueda
       if (term) {
         const fullName = `${user.nombre} ${user.apellido}`.toLowerCase();
         return (
@@ -342,7 +382,6 @@ const UsersPage = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, filteredUsers.length);
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-  // ELIMINADO: const showingStart = filteredUsers.length > 0 ? startIndex + 1 : 0;
 
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages);
@@ -354,7 +393,6 @@ const UsersPage = () => {
     const isError = errors[fieldName];
     const borderColor = isError ? '#ef4444' : '#334155';
     const backgroundColor = isError ? '#451a1a' : '#1e293b';
-
     const labelStyle = {
       fontSize: '12px',
       color: '#e2e8f0',
@@ -395,15 +433,13 @@ const UsersPage = () => {
     if (isSelectField) {
       let fieldOptions = options;
       if (fieldName === 'rol') {
-        // CORRECCIÓN: Verificar si ya existe un administrador para mostrar/ocultar la opción
         const existingAdmin = users.find(u => u.rol === "Administrador");
         fieldOptions = [
           { value: 'Usuario', label: 'Usuario' },
           { value: 'Vendedor', label: 'Vendedor' },
           { value: 'Supervisor', label: 'Supervisor' }
         ];
-        
-        // Solo mostrar opción Administrador si no existe ya uno
+
         if (!existingAdmin || (editingUser && editingUser.rol === "Administrador")) {
           fieldOptions.unshift({ value: 'Administrador', label: 'Administrador' });
         }
@@ -461,74 +497,56 @@ const UsersPage = () => {
     }
   };
 
-  // ─── Columnas INCLUYENDO ESTADO con mejor espaciado y header alineado
+  // ─── Columnas COMPACTAS - Estado centrado como Clientes
   const columns = [
-    { 
-      header: 'Nombre', 
+    {
+      header: 'Nombre',
       field: 'nombreCompleto',
-      width: '200px',
+      width: '25%',
       render: (item) => (
         <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>
           {item.nombre} {item.apellido}
         </span>
-      ) 
+      )
     },
-    { 
-      header: 'Email', 
+    {
+      header: 'Email',
       field: 'email',
-      width: '250px',
+      width: '30%',
       render: (item) => (
         <span style={{ color: '#fff', fontSize: '13px' }}>{item.email}</span>
-      ) 
+      )
     },
-    { 
-      header: 'Rol', 
+    {
+      header: 'Rol',
       field: 'rol',
-      width: '150px',
+      width: '20%',
       render: (item) => (
-        <span style={{ 
-          color: item.rol === 'Administrador' ? '#F5C81B' : '#fff', 
+        <span style={{
+          color: item.rol === 'Administrador' ? '#F5C81B' : '#fff',
           fontSize: '13px',
           fontWeight: item.rol === 'Administrador' ? '600' : '400'
         }}>
           {item.rol}
         </span>
-      ) 
+      )
     },
-    { 
-      header: 'Estado', 
+    {
+      header: 'Estado',
       field: 'estado',
-      width: '100px',
+      width: '12%',
+      align: 'center',
       headerStyle: {
         textAlign: 'center',
-        padding: '6px 2px',
       },
       render: (item) => (
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '4px',
-          padding: '2px 6px',
-          backgroundColor: item.isActive ? '#064e3b' : '#7f1d1d',
-          color: item.isActive ? '#10b981' : '#ef4444',
-          borderRadius: '12px',
-          fontSize: '11px',
-          fontWeight: '600',
-          width: 'fit-content',
-          border: `1px solid ${item.isActive ? '#10b981' : '#ef4444'}`,
-          minWidth: '70px',
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto'
+          width: '100%'
         }}>
-          <span style={{
-            width: '5px',
-            height: '5px',
-            borderRadius: '50%',
-            backgroundColor: item.isActive ? '#10b981' : '#ef4444',
-            display: 'block',
-            flexShrink: 0
-          }}></span>
-          <span style={{ whiteSpace: 'nowrap' }}>{item.isActive ? 'Activo' : 'Inactivo'}</span>
+          <StatusPill status={item.isActive} />
         </div>
       )
     }
@@ -538,7 +556,6 @@ const UsersPage = () => {
   return (
     <>
       {alert.show && <Alert message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, show: false })} />}
-      
       <div style={{ display: "flex", flexDirection: "column", padding: "4px 12px 0 12px", flex: 1, height: "100%" }}>
         {/* Encabezado */}
         <div style={{ marginBottom: "8px" }}>
@@ -583,7 +600,7 @@ const UsersPage = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Buscador y Filtro */}
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
@@ -599,13 +616,13 @@ const UsersPage = () => {
           </div>
         </div>
 
-        {/* Contenido Principal - BORDE MÁS DELGADO */}
+        {/* Contenido Principal */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '6px',
-          border: '0.5px solid #F5C81B',
+          border: '1px solid #F5C81B',
           overflow: 'hidden',
           backgroundColor: '#000',
         }}>
@@ -614,16 +631,16 @@ const UsersPage = () => {
             flex: 1,
             overflow: 'auto',
           }}>
-            <EntityTable 
-              entities={paginatedUsers} 
-              columns={columns} 
-              onView={viewUserDetails} 
-              onEdit={openModal} 
+            <EntityTable
+              entities={paginatedUsers}
+              columns={columns}
+              onView={viewUserDetails}
+              onEdit={openModal}
               onDelete={handleDeleteClick}
               onAnular={handleToggleStatus}
               onReactivar={handleToggleStatus}
-              showAnularButton={true} 
-              moduleType="usuarios" 
+              showAnularButton={true}
+              moduleType="usuarios"
               idField="id"
               estadoField="isActive"
               isAdministradorCheck={isAdministrador}
@@ -640,23 +657,30 @@ const UsersPage = () => {
                 padding: '6px 4px',
                 textAlign: 'left',
                 fontWeight: '600',
-                fontSize: '11px',
+                fontSize: '12px',
                 color: '#F5C81B',
-                borderBottom: '0.5px solid #F5C81B',
+                borderBottom: '1px solid #F5C81B',
                 backgroundColor: '#151822',
+              }}
+              rowStyle={{
+                border: 'none',
+                backgroundColor: '#000',
+                '&:hover': {
+                  backgroundColor: '#111111',
+                }
               }}
               actionsPosition="right"
             />
           </div>
 
-          {/* Paginación - BORDE MÁS DELGADO */}
+          {/* Paginación */}
           <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             padding: "8px 12px",
             backgroundColor: "#151822",
-            borderTop: '0.5px solid #F5C81B',
+            borderTop: '1px solid #F5C81B',
             fontSize: "12px",
             color: "#e0e0e0",
             height: "48px",
@@ -671,7 +695,7 @@ const UsersPage = () => {
                 disabled={currentPage === 1}
                 style={{
                   background: 'transparent',
-                  border: '0.5px solid #F5C81B',
+                  border: '1px solid #F5C81B',
                   color: currentPage === 1 ? '#6B7280' : '#F5C81B',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -698,7 +722,7 @@ const UsersPage = () => {
                 disabled={currentPage >= Math.ceil(filteredUsers.length / itemsPerPage)}
                 style={{
                   background: 'transparent',
-                  border: '0.5px solid #F5C81B',
+                  border: '1px solid #F5C81B',
                   color: currentPage >= Math.ceil(filteredUsers.length / itemsPerPage) ? '#6B7280' : '#F5C81B',
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -715,7 +739,7 @@ const UsersPage = () => {
         </div>
       </div>
 
-      {/* Modal: Crear/Editar Usuario - BORDE MÁS DELGADO */}
+      {/* Modal: Crear/Editar Usuario */}
       <UniversalModal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -723,10 +747,10 @@ const UsersPage = () => {
         subtitle={editingUser?.id ? 'Modifica los datos del usuario' : 'Agrega un nuevo usuario al sistema'}
         showActions={false}
         customStyles={{
-          content: { 
+          content: {
             padding: '16px',
             backgroundColor: '#000',
-            border: '0.5px solid #F5C81B',
+            border: '1px solid #F5C81B',
             borderRadius: '6px',
             maxWidth: '400px',
             width: '90%',
@@ -747,19 +771,7 @@ const UsersPage = () => {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              {renderField('Nombre', 'nombre', 'text')}
-            </div>
-            <div style={{ flex: 1 }}>
-              {renderField('Apellido', 'apellido', 'text')}
-            </div>
-          </div>
-
-          <div>
-            {renderField('Email', 'email', 'email')}
-          </div>
-
+          {/* PRIMERO: Tipo Documento y N° Documento */}
           <div style={{ display: 'flex', gap: '12px' }}>
             <div style={{ flex: 1 }}>
               {renderField('Tipo Documento', 'tipoDocumento', 'select', [
@@ -774,39 +786,53 @@ const UsersPage = () => {
             </div>
           </div>
 
+          {/* SEGUNDO: Nombre y Apellido */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              {renderField('Nombre', 'nombre', 'text')}
+            </div>
+            <div style={{ flex: 1 }}>
+              {renderField('Apellido', 'apellido', 'text')}
+            </div>
+          </div>
+
+          {/* TERCERO: Email */}
+          <div>
+            {renderField('Email', 'email', 'email')}
+          </div>
+
+          {/* CUARTO: Rol */}
           <div>
             {renderField('Rol', 'rol', 'select')}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '0.5px solid #334155', paddingTop: '12px' }}>
-            <button 
-              onClick={closeModal}
-              style={{
-                background: 'transparent',
-                border: '0.5px solid #94a3b8',
-                color: '#94a3b8',
-                padding: '6px 16px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancelar
-            </button>
-            <button 
+          {/* SOLO BOTÓN GUARDAR/REGISTRAR */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginTop: '8px'
+          }}>
+            <button
               onClick={handleSave}
               style={{
                 background: '#F5C81B',
                 color: '#000',
                 border: 'none',
-                padding: '6px 16px',
+                padding: '8px 24px',
                 borderRadius: '4px',
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: '600',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                minWidth: '140px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f5d33c';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#F5C81B';
               }}
             >
-              {editingUser?.id ? 'Guardar Cambios' : 'Crear Usuario'}
+              {editingUser?.id ? 'Guardar Cambios' : 'Registrar Usuario'}
             </button>
           </div>
         </div>
@@ -821,7 +847,7 @@ const UsersPage = () => {
         entityData={userToDelete}
       />
 
-      {/* Modal Detalles - BORDE MÁS DELGADO */}
+      {/* Modal Detalles */}
       <UniversalModal
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
@@ -829,10 +855,10 @@ const UsersPage = () => {
         subtitle="Información detallada del usuario"
         showActions={false}
         customStyles={{
-          content: { 
+          content: {
             padding: '16px',
             backgroundColor: '#000',
-            border: '0.5px solid #F5C81B',
+            border: '1px solid #F5C81B',
             borderRadius: '6px',
             maxWidth: '400px',
             width: '90%',
@@ -850,34 +876,9 @@ const UsersPage = () => {
             fontSize: '12px',
             marginBottom: '16px'
           }
-        }}
-      >
+        }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              <FormField label="Nombre">
-                <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#F5C81B", fontSize: "13px", fontWeight: "600" }}>
-                  {selectedUser?.nombre || 'N/A'}
-                </div>
-              </FormField>
-            </div>
-            <div style={{ flex: 1 }}>
-              <FormField label="Apellido">
-                <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#F5C81B", fontSize: "13px", fontWeight: "600" }}>
-                  {selectedUser?.apellido || 'N/A'}
-                </div>
-              </FormField>
-            </div>
-          </div>
-
-          <div>
-            <FormField label="Email">
-              <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#f1f5f9", fontSize: "13px" }}>
-                {selectedUser?.email || 'N/A'}
-              </div>
-            </FormField>
-          </div>
-
+          {/* PRIMERO: Tipo Documento y N° Documento */}
           <div style={{ display: 'flex', gap: '12px' }}>
             <div style={{ flex: 1 }}>
               <FormField label="Tipo Documento">
@@ -895,16 +896,44 @@ const UsersPage = () => {
             </div>
           </div>
 
+          {/* SEGUNDO: Nombre y Apellido */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <FormField label="Nombre">
+                <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#F5C81B", fontSize: "13px", fontWeight: "600" }}>
+                  {selectedUser?.nombre || 'N/A'}
+                </div>
+              </FormField>
+            </div>
+            <div style={{ flex: 1 }}>
+              <FormField label="Apellido">
+                <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#F5C81B", fontSize: "13px", fontWeight: "600" }}>
+                  {selectedUser?.apellido || 'N/A'}
+                </div>
+              </FormField>
+            </div>
+          </div>
+
+          {/* TERCERO: Email */}
+          <div>
+            <FormField label="Email">
+              <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "6px", padding: "6px 10px", color: "#f1f5f9", fontSize: "13px" }}>
+                {selectedUser?.email || 'N/A'}
+              </div>
+            </FormField>
+          </div>
+
+          {/* CUARTO: Rol y Estado */}
           <div style={{ display: 'flex', gap: '12px' }}>
             <div style={{ flex: 1 }}>
               <FormField label="Rol">
-                <div style={{ 
-                  backgroundColor: "#1e293b", 
-                  border: "1px solid #334155", 
-                  borderRadius: "6px", 
-                  padding: "6px 10px", 
-                  color: selectedUser?.rol === 'Administrador' ? '#F5C81B' : '#f1f5f9', 
-                  fontSize: "13px", 
+                <div style={{
+                  backgroundColor: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  padding: "6px 10px",
+                  color: selectedUser?.rol === 'Administrador' ? '#F5C81B' : '#f1f5f9',
+                  fontSize: "13px",
                   fontWeight: selectedUser?.rol === 'Administrador' ? '600' : '400'
                 }}>
                   {selectedUser?.rol || 'N/A'}
@@ -918,23 +947,6 @@ const UsersPage = () => {
                 </div>
               </FormField>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '0.5px solid #334155', paddingTop: '12px' }}>
-            <button 
-              onClick={() => setIsDetailsOpen(false)}
-              style={{
-                background: 'transparent',
-                border: '0.5px solid #94a3b8',
-                color: '#94a3b8',
-                padding: '6px 16px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              Cerrar
-            </button>
           </div>
         </div>
       </UniversalModal>

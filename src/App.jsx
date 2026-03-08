@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -42,7 +42,7 @@ const ProtectedRoute = ({ user, children }) => {
   const isAdmin = user.IdRol === 1 || user.userType === "admin";
   
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/profile" replace />;
   }
   
   return children;
@@ -57,8 +57,8 @@ const AppContent = () => {
     try {
       const saved = sessionStorage.getItem("user");
       return saved ? JSON.parse(saved) : null;
-    } catch { 
-      return null; 
+    } catch {
+      return null;
     }
   });
   
@@ -67,104 +67,145 @@ const AppContent = () => {
     try {
       const saved = localStorage.getItem("cart");
       return saved ? JSON.parse(saved) : [];
-    } catch { 
-      return []; 
+    } catch {
+      return [];
     }
   });
-
-  // 🟢 NUEVO: Detectar cuando el servidor se desconecta
-  useEffect(() => {
-    let reconnectAttempts = 0;
-    const MAX_RECONNECT_ATTEMPTS = 3;
-    
-    const checkServerConnection = () => {
-      fetch('/api/ping', { 
-        method: 'HEAD',
-        cache: 'no-cache',
-        mode: 'no-cors' // Esto evita errores CORS
-      }).catch(() => {
-        reconnectAttempts++;
-        console.log(`🔄 Intento de reconexión ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
-        
-        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-          console.log('❌ Servidor desconectado - Cerrando sesión');
-          handleLogout(true); // true = cierre por servidor caído
-        }
-      });
-    };
-
-    // Verificar cada 5 segundos
-    const interval = setInterval(checkServerConnection, 5000);
-    
-    // Verificar también cuando la página recupera el foco
-    const handleFocus = () => {
-      reconnectAttempts = 0; // Resetear intentos al volver
-      checkServerConnection();
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
-
+  
   // FUNCIONES DEL CARRITO
   const updateCart = (items) => {
     setCartItems(items);
     localStorage.setItem("cart", JSON.stringify(items));
   };
-
+  
   const addToCart = (product) => {
     const existing = cartItems.find((i) => i.id === product.id);
     if (existing) {
-      updateCart(cartItems.map((i) =>
-        i.id === product.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i
-      ));
+      updateCart(
+        cartItems.map((i) =>
+          i.id === product.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i
+        )
+      );
     } else {
       updateCart([...cartItems, { ...product, quantity: 1 }]);
     }
   };
-
-  // HANDLE LOGIN - Modificado para aceptar parámetro de servidor caído
+  
+  // HANDLE LOGIN
   const handleLogin = (userData) => {
     if (!userData) return;
-    
     sessionStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
-    
+
     const isAdmin = userData.IdRol === 1 || userData.userType === "admin";
-    
+
     if (isAdmin) {
       navigate("/admin/AdminDashboard", { replace: true });
     } else {
       navigate("/profile", { replace: true });
     }
   };
+  
+  // HANDLE LOGOUT
+  const handleLogout = useCallback(
+    (serverDisconnected = false) => {
+      console.log(serverDisconnected ? "🔌 Servidor desconectado" : "🚪 Cerrando sesión");
+      setUser(null);
+      sessionStorage.removeItem("user");
 
-  // HANDLE LOGOUT - Modificado para manejar cierre por servidor
-  const handleLogout = (serverDisconnected = false) => {
-    console.log(serverDisconnected ? '🔌 Servidor desconectado' : '🚪 Cerrando sesión');
-    
-    setUser(null);
-    sessionStorage.removeItem("user");
-    
-    if (serverDisconnected) {
-      // Mostrar mensaje al usuario
-      alert('El servidor se ha desconectado. Por favor, inicia sesión nuevamente.');
-    }
-    
-    navigate("/login", { replace: true });
-  };
+      if (serverDisconnected) {
+        alert("El servidor se ha desconectado. Por favor, inicia sesión nuevamente.");
+      }
 
+      navigate("/login", { replace: true });
+    },
+    [navigate]
+  );
+  
+  // 🟢 Detectar cuando el servidor se desconecta
+  useEffect(() => {
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    
+    const checkServerConnection = () => {
+      fetch("/api/ping", {
+        method: "HEAD",
+        cache: "no-cache",
+        mode: "no-cors",
+      }).catch(() => {
+        reconnectAttempts++;
+        console.log(`🔄 Intento de reconexión ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          console.log("❌ Servidor desconectado - Cerrando sesión");
+          handleLogout(true);
+        }
+      });
+    };
+
+    const interval = setInterval(checkServerConnection, 5000);
+
+    const handleFocus = () => {
+      reconnectAttempts = 0;
+      checkServerConnection();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [handleLogout]);
+  
   const cartItemCount = useMemo(
     () => cartItems.reduce((t, i) => t + (i.quantity || 1), 0),
     [cartItems]
   );
+  
+  // Estados para búsqueda en la misma página
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Función de búsqueda global - AHORA NO REDIRIGE
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    if (!term.trim()) {
+      setIsSearching(false);
+      setSearchResults([]);
+      return;
+    }
 
+    // Importar productos
+    import("./data").then(({ initialProducts }) => {
+      const allProducts = initialProducts.filter((p) => p.isActive !== false);
+      const results = allProducts.filter((product) => {
+        const searchableText = [
+          product.nombre?.toLowerCase() || "",
+          product.categoria?.toLowerCase() || "",
+          product.descripcion?.toLowerCase() || "",
+          ...(product.tags || []).map((tag) => tag.toLowerCase()),
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(term.toLowerCase());
+      });
+
+      setSearchResults(results);
+      setIsSearching(true);
+    });
+  };
+  
+  const clearSearch = () => {
+    setSearchTerm("");
+    setIsSearching(false);
+    setSearchResults([]);
+  };
+  
   const showHeader = !location.pathname.startsWith("/admin") && location.pathname !== "/login";
-
+  
   return (
     <>
       {showHeader && (
@@ -175,26 +216,92 @@ const AppContent = () => {
           cartItemCount={cartItemCount}
           cartItems={cartItems}
           updateCart={updateCart}
+          searchTerm={searchTerm}
+          onSearch={handleSearch}
+          onClearSearch={clearSearch}
         />
       )}
       
       <Routes>
-        <Route path="/" element={<Home addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />} />
+        <Route
+          path="/"
+          element={
+            <Home
+              updateCart={updateCart}
+              cartItems={cartItems}
+              searchTerm={searchTerm}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onSearch={handleSearch}
+              onClearSearch={clearSearch}
+            />
+          }
+        />
+        
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        <Route path="/categorias" element={<Categorias />} />
-        <Route path="/ofertas" element={<Ofertas />} />
-        <Route path="/productos" element={<Productos addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />} />
+        
+        {/* ✅ RUTA DE CATEGORÍAS CORREGIDA - AHORA RECIBE LAS PROPS */}
+        <Route
+          path="/categorias"
+          element={
+            <Categorias
+              searchTerm={searchTerm}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onSearch={handleSearch}
+              onClearSearch={clearSearch}
+            />
+          }
+        />
+        
+        <Route
+          path="/ofertas"
+          element={
+            <Ofertas
+              updateCart={updateCart}
+              cartItems={cartItems}
+              searchTerm={searchTerm}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onSearch={handleSearch}
+              onClearSearch={clearSearch}
+            />
+          }
+        />
+        
+        <Route
+          path="/productos"
+          element={
+            <Productos
+              updateCart={updateCart}
+              cartItems={cartItems}
+              searchTerm={searchTerm}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onSearch={handleSearch}
+              onClearSearch={clearSearch}
+            />
+          }
+        />
+        
         <Route path="/profile" element={<Profile user={user} onLogout={() => handleLogout()} />} />
         <Route path="/perfil" element={<Profile user={user} onLogout={() => handleLogout()} />} />
         <Route path="/cart" element={<Cart cartItems={cartItems} updateCart={updateCart} user={user} onLogout={() => handleLogout()} />} />
-        <Route path="/search" element={<SearchResults addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />} />
+        
+        <Route
+          path="/search"
+          element={<SearchResults addToCart={addToCart} updateCart={updateCart} cartItems={cartItems} />}
+        />
 
         {/* Rutas de admin protegidas */}
-        <Route path="/admin" element={
-          <ProtectedRoute user={user}>
-            <AdminLayoutClean />
-          </ProtectedRoute>
-        }>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute user={user}>
+              <AdminLayoutClean />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="AdminDashboard" replace />} />
           <Route path="AdminDashboard" element={<AdminDashboard user={user} />} />
           <Route path="Categorias" element={<AdminCategorias />} />
