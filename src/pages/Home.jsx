@@ -124,13 +124,11 @@ const buildInitialInventoryFromProducts = (products) => {
     const sizes = normalizeSizes(p);
     const pid = String(p.id);
     if (!sizes.length) continue;
-
     const total = Math.max(0, Number(p.stock ?? 0));
     const totalSafe = Number.isFinite(total) ? total : 0;
     const baseTotal = totalSafe > 0 ? totalSafe : 12;
     const per = Math.floor(baseTotal / sizes.length);
     let rem = baseTotal - per * sizes.length;
-
     inv[pid] = {};
     for (const s of sizes) {
       const add = rem > 0 ? 1 : 0;
@@ -144,15 +142,12 @@ const buildInitialInventoryFromProducts = (products) => {
 const ensureInventory = (products) => {
   const current = readInventory();
   const built = buildInitialInventoryFromProducts(products);
-
   if (!Object.keys(current).length) {
     writeInventory(built);
     return built;
   }
-
   let changed = false;
   const merged = { ...current };
-
   for (const pid of Object.keys(built)) {
     if (!merged[pid]) {
       merged[pid] = built[pid];
@@ -166,7 +161,6 @@ const ensureInventory = (products) => {
       }
     }
   }
-
   if (changed) writeInventory(merged);
   return merged;
 };
@@ -196,8 +190,8 @@ const getStockColorClass = (stock) => {
 /* =========================
 COMPONENT
 ========================= */
-const Home = ({ 
-  updateCart, 
+const Home = ({
+  updateCart,
   cartItems,
   searchTerm: externalSearchTerm,
   searchResults: externalSearchResults,
@@ -322,13 +316,11 @@ const Home = ({
 
     const discountedCart = applyBulkDiscount(newCart);
     localStorage.setItem("cart", JSON.stringify(discountedCart));
-
     if (updateCart) {
       updateCart(discountedCart);
     }
-
-    window.dispatchEvent(new CustomEvent('cartUpdated', { 
-      detail: { cart: discountedCart } 
+    window.dispatchEvent(new CustomEvent('cartUpdated', {
+      detail: { cart: discountedCart }
     }));
 
     const nextInv = decreaseInventory(inventory, product.id, size, qty);
@@ -479,7 +471,6 @@ const Home = ({
       setTimeout(() => setShowQuantityAlert(false), 2000);
       return;
     }
-    
     if (quantity < availableStock) {
       setQuantity(quantity + 1);
     } else if (quantity >= availableStock) {
@@ -548,9 +539,9 @@ const Home = ({
         {/* RESULTADOS DE BÚSQUEDA */}
         {externalIsSearching && (
           <div style={{ marginBottom: '40px' }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               marginBottom: '20px',
               padding: '15px',
@@ -615,7 +606,7 @@ const Home = ({
                 </button>
               </div>
             </div>
-            
+
             {externalSearchResults.length > 0 ? (
               <div className="gm-products-grid" style={{
                 display: 'grid',
@@ -624,17 +615,17 @@ const Home = ({
                 marginBottom: '30px'
               }}>
                 {externalSearchResults.map(product => (
-                  <ProductCard 
-                    key={product.id} 
-                    product={product} 
+                  <ProductCard
+                    key={product.id}
+                    product={product}
                     badge={product.hasDiscount ? "OFERTA" : product.destacado ? "DESTACADO" : null}
                     badgeType={product.hasDiscount ? "oferta" : product.destacado ? "destacado" : null}
                   />
                 ))}
               </div>
             ) : (
-              <div style={{ 
-                textAlign: 'center', 
+              <div style={{
+                textAlign: 'center',
                 padding: '60px 20px',
                 background: 'rgba(15, 23, 42, 0.7)',
                 borderRadius: '16px',
@@ -660,7 +651,6 @@ const Home = ({
                     Ver todos <FaChevronRight size={12} />
                   </Link>
                 </div>
-
                 <div className="gm-carousel">
                   <button
                     className="gm-arrow gm-arrow-left"
@@ -671,7 +661,6 @@ const Home = ({
                   >
                     <FaChevronLeft size={16} />
                   </button>
-
                   <div className="gm-carousel-inner">
                     <div
                       className="gm-track"
@@ -692,7 +681,6 @@ const Home = ({
                       ))}
                     </div>
                   </div>
-
                   <button
                     className="gm-arrow gm-arrow-right"
                     onClick={() => handleCarouselScroll(section.id, "right")}
@@ -708,15 +696,6 @@ const Home = ({
                 </div>
               </div>
             ))}
-
-            <div className="gm-section">
-              <div className="gm-section-header">
-                <h2 className="gm-section-title">Todos los productos</h2>
-                <Link to="/productos" className="gm-view-all-link">
-                  Ver todos <FaChevronRight size={12} />
-                </Link>
-              </div>
-            </div>
           </>
         )}
       </div>
@@ -775,7 +754,7 @@ const Home = ({
                   {selectedProduct.descripcion || "Sin descripción disponible"}
                 </div>
               </div>
-              
+
               {/* TALLAS - OCUPAN TODO EL ANCHO */}
               {sizesForModal.length > 0 && (
                 <div className="gm-sizes-container">
@@ -804,7 +783,7 @@ const Home = ({
                   </div>
                 </div>
               )}
-              
+
               {/* CANTIDAD REDONDA Y SIEMPRE VISIBLE */}
               <div className="gm-quantity-container">
                 <div className="gm-section-label-light">Cantidad:</div>
@@ -828,7 +807,7 @@ const Home = ({
                   </button>
                 </div>
               </div>
-              
+
               {/* STOCK Y MENSAJES EN EL MISMO RENGLÓN */}
               {selectedSize && (
                 <div className="gm-stock-row">
@@ -844,7 +823,6 @@ const Home = ({
                       {remainingStock} unidades
                     </span>
                   )}
-                  
                   {/* MENSAJE DE MAYORISTA EN EL MISMO RENGLÓN */}
                   {quantity >= BULK_MIN_QTY && remainingStock > 0 && (
                     <>
@@ -863,15 +841,15 @@ const Home = ({
                 <div className="gm-quantity-alert">
                   <FaExclamationCircle size={16} />
                   <span>
-                    {!selectedSize && sizesForModal.length > 0 
-                      ? "Debes seleccionar una talla" 
+                    {!selectedSize && sizesForModal.length > 0
+                      ? "Debes seleccionar una talla"
                       : quantity > availableStock && availableStock > 0
-                        ? `Solo hay ${availableStock} ${availableStock === 1 ? 'unidad' : 'unidades'} disponibles`
-                        : "No hay stock disponible"}
+                      ? `Solo hay ${availableStock} ${availableStock === 1 ? 'unidad' : 'unidades'} disponibles`
+                      : "No hay stock disponible"}
                   </span>
                 </div>
               )}
-              
+
               {/* BOTONES - EL DE AÑADIR SIEMPRE VISIBLE PERO DESHABILITADO CUANDO CORRESPONDA */}
               <div className="gm-modal-buttons-row">
                 <button
@@ -879,7 +857,7 @@ const Home = ({
                   onClick={handleModalAddToCart}
                   disabled={(!selectedSize && sizesForModal.length > 0) || remainingStock === 0}
                 >
-                  <FaShoppingCart size={16} /> 
+                  <FaShoppingCart size={16} />
                   Añadir al Carrito
                 </button>
                 <Link
@@ -928,7 +906,6 @@ const Home = ({
           --gm-stock-medium: #F59E0B;
           --gm-stock-low: #EF4444;
         }
-        
         .gm-home {
           background: var(--gm-bg);
           color: var(--gm-text);
@@ -936,16 +913,14 @@ const Home = ({
           padding-top: 60px;
           font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
         }
-        
         .gm-hero {
           position: relative;
           width: 100%;
           height: clamp(200px, 35vh, 350px);
           overflow: hidden;
-          background: var(--gm-black); 
+          background: var(--gm-black);
           margin-bottom: 30px;
         }
-        
         .gm-hero-bg {
           position: absolute;
           inset: 0;
@@ -957,7 +932,6 @@ const Home = ({
           background-position: center center;
           filter: saturate(1.03) contrast(1.02);
         }
-        
         .gm-hero-fade-top {
           position: absolute;
           top: 0;
@@ -967,7 +941,6 @@ const Home = ({
           background: linear-gradient(to bottom, rgba(3,7,18,1), rgba(3,7,18,0));
           z-index: 1;
         }
-        
         .gm-hero-fade-bottom {
           position: absolute;
           left: 0;
@@ -977,7 +950,6 @@ const Home = ({
           background: linear-gradient(to top, rgba(3,7,18,1), rgba(3,7,18,0));
           z-index: 1;
         }
-        
         .gm-hero-inner {
           position: relative;
           z-index: 2;
@@ -991,7 +963,6 @@ const Home = ({
           align-items: center;
           text-align: center;
         }
-        
         .gm-hero-title {
           font-size: clamp(2rem, 4vw, 3.5rem);
           font-weight: 900;
@@ -999,14 +970,12 @@ const Home = ({
           color: var(--gm-text);
           letter-spacing: 0.4px;
         }
-        
         .gm-hero-sub {
           color: var(--gm-muted);
           font-size: clamp(0.95rem, 1.2vw, 1.1rem);
           margin: 0;
           max-width: 700px;
         }
-        
         .gm-hero-help {
           margin: 10px 0 0 0;
           font-size: 0.90rem;
@@ -1014,25 +983,21 @@ const Home = ({
           color: var(--gm-yellow-strong);
           letter-spacing: .2px;
         }
-        
         .gm-container {
           max-width: 1200px;
           margin: 0 auto;
           padding: 0 20px 40px 20px;
         }
-        
         .gm-section {
           margin-top: 26px;
           padding-top: 10px;
         }
-        
         .gm-section-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
           margin-bottom: 12px;
         }
-        
         .gm-section-title {
           margin: 0;
           font-size: 1.25rem;
@@ -1040,7 +1005,6 @@ const Home = ({
           letter-spacing: 0.2px;
           color: var(--gm-text);
         }
-        
         .gm-view-all-link {
           display: inline-flex;
           align-items: center;
@@ -1054,33 +1018,27 @@ const Home = ({
           border-radius: 20px;
           transition: all 180ms ease;
         }
-        
         .gm-view-all-link:hover {
           background: rgba(255,215,0,0.08);
         }
-        
         .gm-carousel {
           position: relative;
           display: flex;
           align-items: center;
         }
-        
         .gm-carousel-inner {
           width: 100%;
           overflow: hidden;
         }
-        
         .gm-track {
           display: flex;
           transition: transform 0.55s ease;
         }
-        
         .gm-slot-single {
           min-width: 25%;
           padding: 0 10px;
           box-sizing: border-box;
         }
-        
         .gm-arrow {
           position: absolute;
           top: 45%;
@@ -1099,29 +1057,23 @@ const Home = ({
           transition: 180ms ease;
           backdrop-filter: blur(6px);
         }
-        
         .gm-arrow:hover {
           background: rgba(255,215,0,0.08);
         }
-        
         .gm-arrow:disabled {
           opacity: 0;
           pointer-events: none;
         }
-        
         .gm-arrow-left {
           left: -10px;
         }
-        
         .gm-arrow-right {
           right: -10px;
         }
-        
         .gm-card {
           background: transparent;
           border-radius: 12px;
         }
-        
         .gm-img-wrapper {
           height: 250px;
           position: relative;
@@ -1131,7 +1083,6 @@ const Home = ({
           border: 1px solid rgba(255,255,255,0.08);
           cursor: pointer;
         }
-        
         .gm-img {
           width: 100%;
           height: 100%;
@@ -1139,11 +1090,9 @@ const Home = ({
           object-position: center;
           transition: transform 240ms ease;
         }
-        
         .gm-img-wrapper:hover .gm-img {
           transform: scale(1.02);
         }
-        
         .gm-badge {
           position: absolute;
           top: 10px;
@@ -1155,29 +1104,23 @@ const Home = ({
           letter-spacing: .4px;
           border: 1px solid rgba(255,255,255,0.12);
         }
-        
         .gm-badge--fill {
           color: #0b1220;
         }
-        
         .gm-badge--oferta {
           background: linear-gradient(135deg, #FFD700, #E6C85A);
         }
-        
         .gm-badge--destacado {
           background: linear-gradient(135deg, #60A5FA, #2563EB);
           color: #fff;
         }
-        
         .gm-badge--masvendido {
           background: linear-gradient(135deg, #34D399, #10B981);
           color: #062312;
         }
-        
         .gm-badge--default {
           background: rgba(255,215,0,0.9);
         }
-        
         .gm-img-dots {
           position: absolute;
           bottom: 10px;
@@ -1195,12 +1138,10 @@ const Home = ({
           pointer-events: none;
           transition: opacity 160ms ease;
         }
-        
         .gm-img-wrapper:hover .gm-img-dots {
           opacity: 1;
           pointer-events: auto;
         }
-        
         .gm-dot {
           width: 9px;
           height: 9px;
@@ -1210,22 +1151,18 @@ const Home = ({
           cursor: pointer;
           transition: .2s ease;
         }
-        
         .gm-dot.active {
           background: rgba(255,215,0,0.95);
           box-shadow: 0 0 10px rgba(255,215,0,.35);
         }
-        
         @media (max-width: 768px) {
           .gm-img-dots {
             display: none;
           }
         }
-        
         .gm-info {
           padding: 8px 8px 6px 8px;
         }
-        
         .gm-product-name-light {
           margin: 0 0 6px 0;
           font-size: 0.9rem;
@@ -1237,22 +1174,18 @@ const Home = ({
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
         }
-        
         .gm-stars-row {
           margin-top: 4px;
         }
-        
         .gm-rating {
           display: inline-flex;
           gap: 2px;
           color: rgba(255,215,0, 0.92);
         }
-        
         .gm-rating svg {
           width: 14px;
           height: 14px;
         }
-        
         .gm-actions-row {
           margin-top: 4px;
           display: flex;
@@ -1260,14 +1193,12 @@ const Home = ({
           justify-content: space-between;
           gap: 10px;
         }
-        
         .gm-price-container-card {
           display: flex;
           flex-direction: row;
           align-items: baseline;
           gap: 12px;
         }
-        
         .gm-price-old-card {
           font-size: 1rem;
           color: rgba(255,255,255,0.5);
@@ -1275,7 +1206,6 @@ const Home = ({
           font-family: "Times New Roman", Times, serif;
           font-weight: 400;
         }
-        
         .gm-price-actions {
           font-variant-numeric: tabular-nums;
           font-family: "Times New Roman", Times, serif;
@@ -1284,7 +1214,6 @@ const Home = ({
           color: var(--gm-yellow-strong);
           white-space: nowrap;
         }
-        
         .gm-btn {
           height: 44px;
           padding: 0 16px;
@@ -1302,11 +1231,9 @@ const Home = ({
           font-size: 0.92rem;
           transition: 180ms ease;
         }
-        
         .gm-btn:hover {
           background: rgba(255,215,0,0.08);
         }
-        
         .gm-btn-cart {
           width: 38px;
           height: 38px;
@@ -1317,14 +1244,12 @@ const Home = ({
           color: var(--gm-yellow-text);
           transition: all 0.3s ease;
         }
-        
         .gm-btn-cart:hover {
           background: rgba(255,215,0,0.25);
           border-color: #FFA500;
           color: #FFA500;
           transform: scale(1.05);
         }
-         
         .gm-modal-overlay {
           position: fixed;
           inset: 0;
@@ -1335,7 +1260,6 @@ const Home = ({
           z-index: 9999;
           padding: 18px;
         }
-        
         .gm-modal {
           position: relative;
           width: min(900px, 95%);
@@ -1347,7 +1271,6 @@ const Home = ({
           padding: 16px;
           box-shadow: 0 20px 50px rgba(0,0,0,0.55);
         }
-        
         .gm-modal-close {
           position: absolute;
           top: 10px;
@@ -1364,20 +1287,17 @@ const Home = ({
           align-items: center;
           justify-content: center;
           transition: all 0.2s ease;
-        } 
-        
+        }
         .gm-modal-close:hover {
           background: rgba(255,255,255,0.1);
           color: #fff;
         }
-        
         .gm-modal-left {
           flex: 0 0 45%;
           min-width: 300px;
           border-radius: 12px;
           overflow: hidden;
         }
-        
         .gm-modal-imgbox {
           width: 100%;
           height: 100%;
@@ -1389,35 +1309,30 @@ const Home = ({
           align-items: center;
           justify-content: center;
         }
-        
         .gm-modal-img {
           width: 100%;
           height: 100%;
           object-fit: contain;
           object-position: center;
         }
-        
-        .gm-modal-right { 
+        .gm-modal-right {
           flex: 1;
           display: flex;
           flex-direction: column;
           gap: 12px;
           padding: 10px;
         }
-        
         .gm-modal-header-row {
           display: flex;
           flex-direction: column;
           gap: 6px;
         }
-        
         .gm-modal-title-row {
-          display: flex; 
+          display: flex;
           align-items: center;
           gap: 12px;
           flex-wrap: wrap;
         }
-        
         .gm-modal-title-light {
           margin: 0;
           font-size: 1.4rem;
@@ -1425,7 +1340,6 @@ const Home = ({
           line-height: 1.2;
           color: #fff;
         }
-        
         .gm-price-row {
           display: flex;
           align-items: center;
@@ -1433,20 +1347,17 @@ const Home = ({
           flex-wrap: wrap;
           margin: 4px 0;
         }
-        
         .gm-price-strikethrough {
           color: rgba(255,255,255,0.5);
           text-decoration: line-through;
           font-size: 1rem;
           font-family: "Times New Roman", Times, serif;
         }
-        
         .gm-price-arrow {
           color: var(--gm-yellow-strong);
           font-size: 1rem;
           font-weight: 700;
         }
-        
         .gm-modal-price {
           color: var(--gm-yellow-strong);
           font-weight: 900;
@@ -1454,13 +1365,11 @@ const Home = ({
           font-family: "Times New Roman", Times, serif;
           white-space: nowrap;
         }
-        
         .gm-modal-tags-inline {
           display: flex;
           gap: 6px;
           flex-wrap: wrap;
         }
-        
         .gm-product-description {
           margin-top: 8px;
           padding: 8px 12px;
@@ -1471,44 +1380,37 @@ const Home = ({
           border: 1px solid rgba(96,165,250,0.2);
           line-height: 1.4;
         }
-        
-        .gm-tag--color-white { 
+        .gm-tag--color-white {
           background: #fff;
           color: #000;
           border-color: #fff;
         }
-         
         .gm-tag--color-brown {
           background: #8B4513;
           color: #fff;
           border-color: #8B4513;
         }
-        
         .gm-tag--color-blue {
           background: #0047AB;
           color: #fff;
           border-color: #0047AB;
         }
-        
         .gm-tag--color-black {
           background: #000;
           color: #fff;
           border-color: #333;
         }
-        
         .gm-tag--color-gray {
           background: #6B7280;
           color: #fff;
           border-color: #6B7280;
         }
-        
         .gm-tag--color-red {
           background: #DC2626;
           color: #fff;
           border-color: #DC2626;
         }
-        
-        .gm-tag { 
+        .gm-tag {
           padding: 4px 8px;
           border-radius: 12px;
           font-weight: 700;
@@ -1516,23 +1418,19 @@ const Home = ({
           border: 1px solid rgba(96,165,250,0.35);
           color: #fff;
         }
-        
-         .gm-tag--featured {
+        .gm-tag--featured {
           background: var(--gm-blue-light);
           border-color: var(--gm-blue-medium);
         }
-        
         .gm-tag--offer {
           background: var(--gm-blue-medium);
           border-color: var(--gm-blue-dark);
         }
-        
         /* TALLAS */
         .gm-sizes-container {
           margin: 8px 0 4px 0;
           width: 100%;
         }
-        
         .gm-sizes-grid {
           display: flex;
           flex-wrap: wrap;
@@ -1540,7 +1438,6 @@ const Home = ({
           margin-top: 6px;
           width: 100%;
         }
-        
         .gm-size-chip-new {
           display: inline-flex;
           align-items: center;
@@ -1557,29 +1454,24 @@ const Home = ({
           cursor: pointer;
           transition: all 0.2s ease;
         }
-        
         .gm-size-chip-new:hover:not(.is-disabled) {
           border-color: #FFD700;
           color: #FFD700;
         }
-        
         .gm-size-chip-new.is-selected {
           border-color: #FFD700;
           color: #FFD700;
         }
-        
         .gm-size-chip-new.is-disabled {
           opacity: 0.35;
           border-color: rgba(255,255,255,0.2);
           cursor: not-allowed;
         }
-        
         /* CANTIDAD REDONDA Y SIEMPRE VISIBLE - VERSIÓN COMPACTA */
         .gm-quantity-container {
           margin: 8px 0 4px 0;
           width: 100%;
         }
-        
         .gm-quantity-round {
           display: flex;
           align-items: center;
@@ -1591,7 +1483,6 @@ const Home = ({
           width: fit-content;
           background: rgba(0,0,0,0.2);
         }
-        
         .gm-qty-btn-round {
           width: 28px;
           height: 28px;
@@ -1606,16 +1497,13 @@ const Home = ({
           transition: all 0.2s ease;
           font-size: 0.8rem;
         }
-        
         .gm-qty-btn-round:hover:not(:disabled) {
           background: rgba(42,74,111,0.6);
         }
-        
         .gm-qty-btn-round:disabled {
           opacity: 0.3;
           cursor: not-allowed;
         }
-        
         .gm-qty-value-round {
           min-width: 24px;
           text-align: center;
@@ -1623,14 +1511,12 @@ const Home = ({
           font-size: 0.9rem;
           color: #fff;
         }
-        
         .gm-section-label-light {
           font-weight: 400;
           color: #fff;
           font-size: 0.9rem;
           margin-bottom: 4px;
         }
-        
         /* STOCK Y MENSAJES EN EL MISMO RENGLÓN */
         .gm-stock-row {
           margin: 8px 0 4px 0;
@@ -1644,30 +1530,25 @@ const Home = ({
           border-bottom: 1px solid rgba(255,255,255,0.08);
           padding: 8px 0;
         }
-        
         .gm-stock-label {
           color: rgba(255,255,255,0.5);
           font-weight: 400;
           font-size: 0.8rem;
         }
-        
         .gm-stock-value {
           font-weight: 500;
           font-size: 0.85rem;
         }
-        
         .gm-stock-separator {
           color: rgba(255,255,255,0.3);
           font-size: 0.8rem;
           margin: 0 2px;
         }
-        
         .gm-out-of-stock-text {
           color: #ef4444;
           font-weight: 500;
           font-size: 0.85rem;
         }
-        
         .gm-wholesale-inline {
           display: inline-flex;
           align-items: center;
@@ -1676,28 +1557,22 @@ const Home = ({
           font-weight: 500;
           font-size: 0.85rem;
         }
-        
         .gm-wholesale-inline svg {
           color: #10B981;
         }
-        
         /* Colores dinámicos para el stock */
         .stock-high {
           color: var(--gm-stock-high);
         }
-        
         .stock-medium {
           color: var(--gm-stock-medium);
         }
-        
         .stock-low {
           color: var(--gm-stock-low);
         }
-        
         .stock-zero {
           color: #ef4444;
         }
-        
         .gm-size-error-msg {
           color: var(--gm-error);
           font-size: 0.8rem;
@@ -1705,33 +1580,29 @@ const Home = ({
           margin-top: 8px;
           animation: shake 0.4s ease-in-out;
         }
-        
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-5px); }
           75% { transform: translateX(5px); }
         }
-        
         .gm-quantity-alert{
           display: flex;
           align-items: center;
           gap: 8px;
           padding: 8px 12px;
           background: rgba(239, 68, 68, 0.15);
-          border: 1px solid #ef4444; 
+          border: 1px solid #ef4444;
           border-radius: 8px;
           color: #ef4444;
           font-size: 0.85rem;
           font-weight: 500;
           margin: 4px 0;
         }
-        
         .gm-modal-buttons-row {
           display: flex;
           gap: 12px;
           margin-top: 10px;
         }
-        
         /* BOTÓN AÑADIR AMARILLO SIEMPRE - SIEMPRE VISIBLE */
         .gm-btn-add-cart-yellow {
           flex: 2;
@@ -1751,24 +1622,20 @@ const Home = ({
           transition: all 180ms ease;
           white-space: nowrap;
         }
-        
         .gm-btn-add-cart-yellow:hover:not(:disabled) {
           background: transparent;
           color: #FFB300;
         }
-        
         .gm-btn-add-cart-yellow.gm-btn-disabled {
           opacity: 0.6;
           cursor: not-allowed;
           background: #FFB300;
           color: #000;
         }
-        
         .gm-btn-add-cart-yellow:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }
-        
         .gm-btn-view-cart-new {
           flex: 1;
           height: 36px;
@@ -1788,13 +1655,11 @@ const Home = ({
           transition: all 180ms ease;
           min-width: auto;
         }
-        
         .gm-btn-view-cart-new:hover {
           background: rgba(255, 179, 0, 0.1);
           border-color: #FFA000;
           color: #FFA000;
         }
-        
         .success-toast-container {
           position: fixed;
           top: 100px;
@@ -1802,7 +1667,6 @@ const Home = ({
           z-index: 10000;
           animation: slideInRight 0.4s ease-out;
         }
-        
         .success-toast-content {
           background: #1e293b;
           border: 1px solid var(--gm-yellow-border);
@@ -1814,20 +1678,17 @@ const Home = ({
           box-shadow: 0 10px 25px rgba(0,0,0,0.5);
           min-width: 280px;
         }
-        
         .toast-text h4 {
           margin: 0;
           font-size: 0.95rem;
           font-weight: 700;
           color: #10B981;
         }
-        
         .toast-text p {
           margin: 2px 0 0 0;
           font-size: 0.8rem;
           color: #94a3b8;
         }
-        
         @keyframes slideInRight {
           from {
             transform: translateX(100%);
@@ -1838,13 +1699,11 @@ const Home = ({
             opacity: 1;
           }
         }
-        
         .gm-products-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 20px;
         }
-        
         @media (max-width: 980px) {
           .gm-products-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -1871,52 +1730,42 @@ const Home = ({
             min-width: auto;
           }
         }
-        
         @media (max-width: 768px) {
           .gm-products-grid {
             grid-template-columns: repeat(2, 1fr);
           }
           .gm-slot-single { min-width: 50%; }
-          
           .gm-hero {
             height: clamp(180px, 30vh, 280px);
           }
-          
           .gm-hero-title {
             font-size: 2rem;
           }
-          
           .gm-hero-sub {
             font-size: 0.95rem;
           }
-          
           .gm-img-wrapper {
             height: 200px;
           }
-          
           .gm-modal {
             flex-direction: column;
             width: 98vw;
             max-height: 95vh;
             padding: 12px;
           }
-          
           .gm-modal-left {
             flex: none;
             width: 100%;
             min-width: auto;
             max-height: 45vh;
           }
-          
           .gm-modal-imgbox {
             min-height: 200px;
             max-height: 45vh;
           }
-          
           .gm-modal-img {
             object-fit: contain;
-          } 
-          
+          }
           .gm-modal-right {
             flex: 1;
             overflow-y: auto;
@@ -1924,57 +1773,46 @@ const Home = ({
             scrollbar-width: none;
             -ms-overflow-style: none;
           }
-          
           .gm-modal-right::-webkit-scrollbar {
             display: none;
             width: 0;
             background: transparent;
           }
-          
           .gm-modal-title-light {
             font-size: 1.3rem;
           }
-          
           .gm-modal-price {
             font-size: 1.2rem;
           }
-          
           .gm-size-chip-new {
             padding: 5px 12px;
             font-size: 0.8rem;
             min-width: 45px;
           }
-          
           .gm-qty-btn-round {
             width: 26px;
             height: 26px;
           }
-          
           .gm-qty-value-round {
             font-size: 0.85rem;
             min-width: 22px;
           }
-          
           .gm-sizes-grid {
             gap: 6px;
           }
-          
           .gm-quantity-round {
             padding: 3px 6px;
             gap: 6px;
           }
-          
           .gm-stock-row {
             gap: 6px;
             font-size: 0.8rem;
           }
-          
           .gm-modal-buttons-row {
             display: flex;
             gap: 8px;
             margin-top: 12px;
           }
-          
           .gm-btn-add-cart-yellow {
             flex: 2;
             height: 40px;
@@ -1983,13 +1821,11 @@ const Home = ({
             border-radius: 4px;
             box-shadow: none !important;
           }
-          
           .gm-btn-add-cart-yellow:hover {
             background: transparent;
             box-shadow: none !important;
             transform: none !important;
-          } 
-          
+          }
           .gm-btn-view-cart-new {
             flex: 1;
             height: 34px;
@@ -1999,7 +1835,6 @@ const Home = ({
             border-radius: 4px;
             box-shadow: none !important;
           }
-          
           .gm-btn-view-cart-new:hover {
             background: rgba(255, 179, 0, 0.1);
             border-color: #FFA000;
@@ -2008,19 +1843,16 @@ const Home = ({
             transform: none !important;
           }
         }
-        
         @media (max-width: 640px) {
           .gm-products-grid {
             grid-template-columns: 1fr;
           }
           .gm-slot-single { min-width: 100%; }
-          
           .gm-modal-buttons-row {
             display: flex;
             flex-direction: row;
             gap: 6px;
           }
-          
           .gm-btn-add-cart-yellow {
             flex: 2;
             height: 36px;
@@ -2029,7 +1861,6 @@ const Home = ({
             border-radius: 4px;
             box-shadow: none !important;
           }
-          
           .gm-btn-view-cart-new {
             flex: 1;
             height: 32px;
@@ -2040,7 +1871,6 @@ const Home = ({
             box-shadow: none !important;
           }
         }
-        
         @media (max-width: 480px) {
           .gm-products-grid {
             grid-template-columns: 1fr;
@@ -2048,95 +1878,77 @@ const Home = ({
           .gm-container {
             padding: 0 15px 40px 15px;
           }
-          
           .gm-img-wrapper {
             height: 180px;
           }
-          
           .gm-modal {
             padding: 10px;
             border-radius: 12px;
           }
-          
           .gm-modal-left {
             max-height: 40vh;
           }
-          
           .gm-modal-imgbox {
             min-height: 150px;
             max-height: 40vh;
           }
-          
           .gm-modal-title-light {
             font-size: 1.15rem;
           }
-          
           .gm-modal-price {
             font-size: 1.1rem;
           }
-          
           .gm-sizes-grid {
-            gap: 5px; 
+            gap: 5px;
           }
-          
           .gm-size-chip-new {
             padding: 4px 10px;
             font-size: 0.75rem;
             min-width: 40px;
           }
-          
           .gm-modal-close {
             width: 36px;
             height: 36px;
             top: 8px;
             right: 8px;
           }
-          
           .gm-btn-add-cart-yellow {
             height: 34px;
             font-size: 0.7rem;
             padding: 0 8px;
           }
-          
           .gm-btn-view-cart-new {
             height: 30px;
             font-size: 0.65rem;
             padding: 0 5px;
           }
-          
           .gm-qty-btn-round {
             width: 24px;
             height: 24px;
           }
-          
           .gm-qty-value-round {
             font-size: 0.8rem;
             min-width: 20px;
           }
-          
           .success-toast-container {
             top: 70px;
           }
         }
-        
         .gm-modal-right {
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
-        
         .gm-modal-right::-webkit-scrollbar {
           display: none;
           width: 0;
           background: transparent;
         }
-        
         .gm-btn-add-cart-yellow,
         .gm-btn-view-cart-new,
         .gm-btn-cart {
           box-shadow: none !important;
           transition: background 180ms ease, border-color 180ms ease, color 180ms ease !important;
         }
-        
         .gm-btn-add-cart-yellow:hover,
         .gm-btn-view-cart-new:hover,
         .gm-btn-cart:hover {

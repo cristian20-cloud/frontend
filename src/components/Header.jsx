@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
   FaShoppingCart, FaUser, FaSearch, FaTimes, FaTrash,
   FaHome, FaTags, FaFire, FaSignInAlt, FaPlus, FaMinus, FaBars,
-  FaTrashAlt
+  FaTrashAlt, FaBox
 } from "react-icons/fa";
 import UserMenu from "./UserMenu";
 
@@ -170,7 +170,7 @@ const Header = ({
     if (item.imagen && item.imagen.trim() !== '') return item.imagen;
     if (item.imagenes && item.imagenes.length > 0) return item.imagenes[0];
     if (item.image && item.image.trim() !== '') return item.image;
-    return 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM';
+    return 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM  ';
   };
 
   // Función para obtener nombre de forma segura
@@ -228,7 +228,7 @@ const Header = ({
   }, []);
 
   const handleImageError = (e) => {
-    e.target.src = 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM';
+    e.target.src = 'https://via.placeholder.com/50x50/1E293B/FFC107?text=GM  ';
   };
 
   return (
@@ -278,6 +278,11 @@ const Header = ({
 
             <Link to="/categorias" style={navLink}>
               <FaTags size={14} /> <span>Categorías</span>
+            </Link>
+
+            {/* ✅ NUEVO ENLACE: PRODUCTOS */}
+            <Link to="/productos" style={navLink}>
+              <FaBox size={14} /> <span>Productos</span>
             </Link>
 
             <Link to="/ofertas" style={navLink}>
@@ -546,6 +551,17 @@ const Header = ({
             >
               <FaTags size={16} style={mobileNavIcon} /> 
               <span>Categorías</span>
+            </Link>
+          
+            {/* ✅ NUEVO ENLACE MÓVIL: PRODUCTOS */}
+            <Link 
+              to="/productos" 
+              className="mobile-menu-link" 
+              onClick={() => setIsMenuOpen(false)}
+              style={mobileNavItem}
+            >
+              <FaBox size={16} style={mobileNavIcon} /> 
+              <span>Productos</span>
             </Link>
           
             <Link 

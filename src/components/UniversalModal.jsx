@@ -13,31 +13,31 @@ const UniversalModal = ({
   confirmText = "Guardar",
   actionLabel,
   customStyles = {}
-}) => {<
-  if (!isOpen) return null;
-
+}) => {
   const handleConfirm = onSave || onConfirm || (() => {});
   const handleCancel = onCancel || onClose || (() => {});
-
   const modalContentStyle = customStyles.content || {};
   const modalOverlayStyle = customStyles.overlay || {};
   const modalHeaderStyle = customStyles.header || {};
 
   /* ============================
-     CERRAR CON ESC
-  ============================ */
+     CERRAR CON ESC (ANTES DEL RETURN)
+     ============================ */
   useEffect(() => {
+    // Solo agrega el listener si el modal está abierto
+    if (!isOpen) return;
+    
     const handleEsc = (e) => {
       if (e.key === "Escape") onClose?.();
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  }, [isOpen, onClose]); // ← Agregamos isOpen como dependencia
+
+  // Return temprano AHORA después del hook ✅
+  if (!isOpen) return null;
 
   return (
-    /* ============================
-       OVERLAY (NO ROBA FOCO)
-    ============================ */
     <div
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -54,9 +54,6 @@ const UniversalModal = ({
         ...modalOverlayStyle
       }}
     >
-      {/* ============================
-          CONTENEDOR MODAL
-      ============================ */}
       <div
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
@@ -107,17 +104,9 @@ const UniversalModal = ({
             ...modalHeaderStyle
           }}
         >
-          <h2
-            style={{
-              color: "#F5C81B",
-              fontSize: "1.3rem",
-              fontWeight: 700,
-              marginBottom: "4px"
-            }}
-          >
+          <h2 style={{ color: "#F5C81B", fontSize: "1.3rem", fontWeight: 700, marginBottom: "4px" }}>
             {title}
           </h2>
-
           {subtitle && (
             <p style={{ color: "#aaa", fontSize: "0.8rem", margin: 0 }}>
               {subtitle}
@@ -157,7 +146,6 @@ const UniversalModal = ({
             >
               Cancelar
             </button>
-
             <button
               type="button"
               onClick={handleConfirm}
